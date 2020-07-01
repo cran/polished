@@ -1,0 +1,7 @@
+default:
+  app_name: "polished_example_02"
+  api_key: "eOl5hsOcGKOEev1F8OKtMcBtfw7ts5eJm1"
+  firebase:
+    apiKey: "AIzaSyAITJDrvR6iiJfchO-2S5SDD-lQHKBiK8k"
+    authDomain: "polished-examples.firebaseapp.com"
+    projectId: "polished-examples"
