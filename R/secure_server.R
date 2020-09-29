@@ -5,13 +5,15 @@
 #' the bottom of your 'shiny' app's "server.R" file.
 #'
 #' @param server A Shiny server function (e.g \code{function(input, output, session) {}})
-#' @param custom_admin_server Either \code{NULL}, the default, or a Shiny server function containing your custom admin
+#' @param custom_admin_server Either \code{NULL}, the default, or a Shiny module server function containing your custom admin
 #' server functionality.
 #' @param custom_sign_in_server Either \code{NULL}, the default, or a Shiny module server containing your custom
 #' sign in server logic.
 #' @param allow_reconnect argument to pass to the 'shiny' \code{session$allowReconnect()} function. Defaults to
 #' \code{FALSE}.  Set to \code{TRUE} to allow reconnect with shiny-server and Rstudio Connect.  Set to "force"
 #' for local testing.  See \url{https://shiny.rstudio.com/articles/reconnecting.html} for more information.
+#' @param account_module the server code for the user account module.
+#' @param splash_module the server code for the splash page.
 #'
 #' @export
 #'
@@ -23,7 +25,9 @@ secure_server <- function(
   server,
   custom_sign_in_server = NULL,
   custom_admin_server = NULL,
-  allow_reconnect = FALSE
+  allow_reconnect = FALSE,
+  account_module = NULL,
+  splash_module = NULL
 ) {
 
   server <- force(server)
@@ -47,14 +51,14 @@ secure_server <- function(
           email = "admin@tychobra.com",
           is_admin = TRUE,
           hashed_cookie = character(0),
-          email_verified = TRUE
+          email_verified = TRUE,
+          roles = NA
         ))
 
-        # remove admin_panel=false from query
         shiny::updateQueryString(
           queryString = paste0("?page=admin_panel"),
           session = session,
-          mode = "replace"
+          mode = "push"
         )
         return()
       }
@@ -70,7 +74,8 @@ secure_server <- function(
         # user is not signed in
 
         # if the user is not on the sign in page, redirect to sign in and reload
-        if (is.null(page) || !identical(page, "sign_in")) {
+        if (!identical(page, "sign_in") || (is.null(splash_module) && is.null(page))
+        ) {
           shiny::updateQueryString(
             queryString = paste0("?page=sign_in"),
             session = session,
@@ -79,7 +84,7 @@ secure_server <- function(
           session$reload()
         } else {
 
-          session$userData$user(NULL)
+        session$userData$user(NULL)
           return()
         }
 
@@ -90,21 +95,33 @@ secure_server <- function(
 
         # if the user somehow ends up on the sign_in page, redirect them to the
         # Shiny app and reload
-        if (!is.null(page) && identical(query_list$page, "sign_in")) {
+
+        if (identical(query_list$page, "sign_in")) {
           remove_query_string()
           session$reload()
         }
 
         #if (isTRUE(global_user$email_verified)) {
-        if (is.na(global_user$signed_in_as)) {
+        if (is.na(global_user$signed_in_as) || !is.null(query_list$page)) {
+
+          # user is not on the custom Shiny app, so clear the signed in as user
+          if (!is.na(global_user$signed_in_as)) {
+            # clear signed in as in .global_sessions
+            .global_sessions$set_signed_in_as(
+              global_user$session_uid,
+              NA,
+              user_uid = global_user$user_uid
+            )
+          }
 
           user_out <- global_user[
-            c("session_uid", "user_uid", "email", "is_admin", "hashed_cookie", "email_verified")
+            c("session_uid", "user_uid", "email", "is_admin", "hashed_cookie", "email_verified", "roles")
           ]
 
           session$userData$user(user_out)
 
         } else {
+
           signed_in_as_user <- .global_sessions$get_signed_in_as_user(global_user$signed_in_as)
           signed_in_as_user$session_uid <- global_user$session_uid
           signed_in_as_user$hashed_cookie <- global_user$hashed_cookie
@@ -124,25 +141,91 @@ secure_server <- function(
 
     # if the user is an admin and on the admin page, set up the admin server
     shiny::observeEvent(session$userData$user(), {
+      query_list <- shiny::getQueryString()
+      hold_user <- session$userData$user()
 
-      if (isTRUE(session$userData$user()$email_verified)) {
-        query_list <- shiny::getQueryString()
+      if (isTRUE(hold_user$email_verified) ||
+          isFALSE(.global_sessions$is_email_verification_required)) {
+
 
         is_on_admin_page <- if (
           isTRUE(.global_sessions$get_admin_mode()) ||
-          !is.null(query_list$page) && query_list$page == 'admin_panel') TRUE else FALSE
+          identical(query_list$page, 'admin_panel')) TRUE else FALSE
 
 
-        if (isTRUE(session$userData$user()$is_admin) && isTRUE(is_on_admin_page)) {
-          callModule(
+        if (isTRUE(hold_user$is_admin) && isTRUE(is_on_admin_page)) {
+
+
+          shiny::callModule(
             admin_module,
             "admin"
           )
 
           # custom admin server functionality
           if (isTRUE(!is.null(custom_admin_server))) {
-            custom_admin_server(input, output, session)
+            if (names(formals(custom_admin_server))[[1]] == "id") {
+              # new-style Shiny module
+              custom_admin_server("custom_admin")
+            } else {
+              # old-style Shiny module
+              callModule(
+                custom_admin_server,
+                "custom_admin"
+              )
+            }
+
+
           }
+        } else if (identical(query_list$page, "account")) {
+
+
+          # load up the account module
+          if (names(formals(account_module))[[1]] == "id") {
+            # new-style Shiny module
+            account_module("account")
+          } else {
+            # old-style Shiny module
+            shiny::callModule(
+              account_module,
+              "account"
+            )
+          }
+
+
+
+
+        } else if (is.null(query_list$page)) {
+
+          # go to the custom app
+          server(input, output, session)
+
+          if (isTRUE(hold_user$is_admin)) {
+            # go to admin panel button
+            shiny::callModule(
+              admin_button,
+              "polished"
+            )
+          }
+
+
+          # set the session to inactive when the session ends
+          shiny::onStop(fun = function() {
+
+            tryCatch({
+
+              .global_sessions$set_inactive(
+                session_uid = hold_user$session_uid,
+                user_uid = hold_user$user_uid
+              )
+
+            }, catch = function(err) {
+              print('error setting the session to incative')
+              print(err)
+            })
+
+          })
+
+
         }
 
       } else {
@@ -156,71 +239,55 @@ secure_server <- function(
         )
       }
 
+    }, once = TRUE)
 
 
-    })
+    # load up the sign in module server logic if the user in on "sign_in" page
 
-    # go to admin panel
-    shiny::callModule(
-      admin_button,
-      "polished"
-    )
+    observeEvent(session$userData$user(), {
+      req(is.null(session$userData$user()))
 
-    if (is.null(custom_sign_in_server)) {
-      if (isTRUE(.global_sessions$is_invite_required)) {
-        shiny::callModule(
-          sign_in_module,
-          "sign_in"
-        )
-      } else {
-        shiny::callModule(
-          sign_in_no_invite_module,
-          "sign_in"
-        )
-      }
-    } else {
-
-      shiny::callModule(
-        custom_sign_in_server,
-        "sign_in"
-      )
-
-    }
-
-
-
-
-
-    # custom app server.  Requires signed in user to access
-    shiny::observeEvent(session$userData$user(), {
       query_list <- shiny::getQueryString()
+      page <- query_list$page
 
-      if (is.null(query_list$page) && session$userData$user()$email_verified &&
-          isFALSE(.global_sessions$get_admin_mode())) {
-        hold_user <- session$userData$user()
-        server(input, output, session)
+      if (identical(page, "sign_in")) {
 
-        # set the session from inactive to active
-        #.global_sessions$set_active(session_uid)
+        if (is.null(custom_sign_in_server)) {
 
-        # set the session to inactive when the session ends
-        shiny::onStop(fun = function() {
+          shiny::callModule(
+            sign_in_module,
+            "sign_in"
+          )
 
-          tryCatch({
+        } else {
 
-            .global_sessions$set_inactive(
-              session_uid = hold_user$session_uid,
-              user_uid = hold_user$user_uid
+
+          if (names(formals(custom_sign_in_server))[[1]] == "id") {
+            custom_sign_in_server("sign_in")
+          } else {
+            shiny::callModule(
+              custom_sign_in_server,
+              "sign_in"
             )
+          }
 
-          }, catch = function(err) {
-            print('error setting the session to incative')
-            print(err)
-          })
+        }
+      } else if (is.null(page) && !is.null(splash_module)) {
 
-        })
+        if (names(formals(splash_module))[[1]] == "id") {
+          splash_module("splash")
+        } else {
+          callModule(
+            splash_module,
+            "splash"
+          )
+        }
+
       }
-    })
+
+    }, ignoreNULL = FALSE, once = TRUE)
+
+
 
 
 

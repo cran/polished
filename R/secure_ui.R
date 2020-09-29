@@ -7,13 +7,16 @@
 #' @param ui UI of the application.
 #' @param sign_in_page_ui Either \code{NULL}, the default, or the HTML, CSS, and JavaScript
 #' to use for the UI of the Sign In page.
-#' @param custom_admin_ui Either \code{NULL}, the default, or a list of 2 elements containing custom
-#' UI to add additional 'shinydashboard' tabs to the Polished admin panel.
+#' @param custom_admin_ui Either \code{NULL}, the default, or a list of 2 Shiny module UI functions
+#' to add additional 'shinydashboard' tabs to the Polished admin panel. The list must be in the form
+#' list("menu_items" = <your_custom_admin_menu_ui('custom_admin')>, "tab_items" = <your_custom_admin_tabs_ui('custom_admin')>).
 #' @param custom_admin_button_ui Either \code{admin_button_ui("polished")}, the default, or your custom
 #' UI to take admins from the custom Shiny app to the Admin panel.
 #' @param admin_ui_options list of html elements to customize branding of the "Admin Panel".  Valid
 #' list element names are "title", "sidebar_branding", and "browser_tab_icon".  See
 #' \code{\link{default_admin_ui_options}} for an example.
+#' @param account_module_ui the ui for the user's account module.
+#' @param splash_module_ui the ui for the splash page.
 #'
 #' @return Secured Shiny app UI
 #'
@@ -30,7 +33,9 @@ secure_ui <- function(
   sign_in_page_ui = NULL,
   custom_admin_ui = NULL,
   custom_admin_button_ui = admin_button_ui("polished"),
-  admin_ui_options = default_admin_ui_options()
+  admin_ui_options = default_admin_ui_options(),
+  account_module_ui = NULL,
+  splash_module_ui = NULL
 ) {
 
   ui <- force(ui)
@@ -64,6 +69,28 @@ secure_ui <- function(
       hashed_cookie <- digest::digest(polished_cookie)
     }
 
+    # if a token exists attempt to sign in the user using the token.  This is used to automatically
+    # sign a user in via an email link without requiring the user to enter their email
+    # and password.
+    if (!is.null(query$token)) {
+      query_cookie <- query$token
+      return(
+        tagList(
+          tags$script(src = "https://cdn.jsdelivr.net/npm/js-cookie@2/src/js.cookie.min.js"),
+          tags$script(paste0("
+            Cookies.set(
+              'polished',
+              '", query_cookie, "',
+              { expires: 365 } // set cookie to expire in 1 year
+            )
+
+            window.location.href = window.location.origin + window.location.pathname;
+
+          "))
+        )
+      )
+    }
+
 
     user <- NULL
     if (!is.null(hashed_cookie) && length(hashed_cookie) > 0) {
@@ -80,37 +107,40 @@ secure_ui <- function(
 
     if (is.null(user)) {
 
+      if (!is.null(splash_module_ui) && is.null(page_query)) {
 
+        page_out <- tagList(
+          splash_module_ui,
+          tags$script(src = "polish/js/router.js?version=1")
+        )
 
-      if (identical(page_query, "sign_in")) {
+      } else if (identical(page_query, "sign_in")) {
         # go to the sign in page
         if (is.null(sign_in_page_ui)) {
 
           # go to default sign in page
-          if (isTRUE(.global_sessions$is_invite_required)) {
-            page_out <- tagList(
-              sign_in_ui_default()
-            )
-          } else {
-            page_out <- tagList(
-              sign_in_ui_default(
-                sign_in_module = sign_in_no_invite_module_ui("sign_in")
-              )
-            )
-          }
+          page_out <- tagList(
+            sign_in_ui_default(),
+            tags$script(src = "polish/js/router.js?version=1")
+          )
 
         } else {
 
           # go to custom sign in page
           page_out <- tagList(
-            sign_in_page_ui
+            sign_in_page_ui,
+            tags$script(src = "polish/js/router.js?version=1")
           )
         }
+
       } else {
+
+
 
         # send a random uuid as the polished_session.  This will trigger a session
         # reload and a redirect to the sign in page
         page_out <- tagList(
+          tags$script(src = "polish/js/router.js?version=1"),
           tags$script(src = "polish/js/polished_session.js?version=2"),
           tags$script(paste0("polished_session('", uuid::UUIDgenerate(), "')"))
         )
@@ -119,25 +149,50 @@ secure_ui <- function(
 
     } else {
 
-      if (isTRUE(user$email_verified)) {
 
-        if (isTRUE(user$is_admin)) {
+      if (identical(page_query, "sign_in")) {
+        # send signed in session to polished_session.  This will trigger
+        # a redirect to the app
+        page_out <- tagList(
+          tags$script(src = "polish/js/router.js?version=1"),
+          tags$script(src = "polish/js/polished_session.js?version=2"),
+          tags$script(paste0("polished_session('", user$hashed_cookie, "')"))
+        )
+      } else if (isTRUE(user$email_verified) ||
+          isFALSE(.global_sessions$is_email_verification_required)) {
 
+        if (identical(page_query, "account")) {
+
+          # server the payments module UI
+          if (is.null(account_module_ui)) {
+            stop("`account_module_ui`` cannot ne NULL", call. = FALSE)
+          } else {
+            page_out <- tagList(
+              account_module_ui,
+              tags$script(src = "polish/js/router.js?version=1"),
+              tags$script(src = "polish/js/polished_session.js?version=2"),
+              tags$script(paste0("polished_session('", user$hashed_cookie, "')"))
+            )
+          }
+
+        } else if (isTRUE(user$is_admin)) {
 
           if (identical(page_query, "admin_panel")) {
 
             # go to Admin Panel
             page_out <- tagList(
               admin_module_ui("admin", custom_admin_ui, options = admin_ui_options),
+              tags$script(src = "polish/js/router.js?version=1"),
               tags$script(src = "polish/js/polished_session.js?version=2"),
               tags$script(paste0("polished_session('", user$hashed_cookie, "')"))
             )
-          } else {
+          } else if (is.null(page_query)) {
 
             # go to Shiny app with admin button.  User is an admin.
             page_out <- tagList(
               ui,
               custom_admin_button_ui,
+              tags$script(src = "polish/js/router.js?version=1"),
               tags$script(src = "polish/js/polished_session.js?version=2"),
               tags$script(paste0("polished_session('", user$hashed_cookie, "')"))
             )
@@ -149,6 +204,7 @@ secure_ui <- function(
           # go to Shiny app without admin button.  User is not an admin
           page_out <- tagList(
             ui,
+            tags$script(src = "polish/js/router.js?version=1"),
             tags$script(src = "polish/js/polished_session.js?version=2"),
             tags$script(paste0("polished_session('", user$hashed_cookie, "')"))
           )
@@ -162,6 +218,7 @@ secure_ui <- function(
           verify_email_module_ui(
             "verify"
           ),
+          tags$script(src = "polish/js/router.js?version=1"),
           tags$script(src = "polish/js/polished_session.js?version=2"),
           tags$script(paste0("polished_session('", user$hashed_cookie, "')"))
         )
@@ -169,6 +226,7 @@ secure_ui <- function(
 
 
     }
+
     page_out
   } # end request handler function
 }

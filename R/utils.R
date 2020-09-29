@@ -4,16 +4,19 @@
 #' inside the server function of your 'shiny' app.
 #'
 #' @param session the Shiny session
-#'
-#' @noRd
+#' @param mode the mode to pass to \code{shiny::updateQueryString()}.  Valid values are
+#' "replace" or "push".
 #'
 #' @importFrom shiny updateQueryString getDefaultReactiveDomain
 #'
-remove_query_string <- function(session = shiny::getDefaultReactiveDomain()) {
+#' @export
+#'
+#'
+remove_query_string <- function(session = shiny::getDefaultReactiveDomain(), mode = "replace") {
 
   shiny::updateQueryString(
-    session$clientData$url_pathname,
-    mode = "replace",
+    "?",
+    mode = mode,
     session = session
   )
 }
@@ -28,6 +31,7 @@ remove_query_string <- function(session = shiny::getDefaultReactiveDomain()) {
 #' @importFrom dplyr filter pull %>%
 #' @importFrom tidyr separate
 #' @importFrom tibble tibble
+#' @importFrom rlang .data
 #'
 #' @noRd
 #'
@@ -56,3 +60,42 @@ time_now_utc <- function() {
   lubridate::with_tz(Sys.time(), tzone = "UTC")
 }
 
+#' @noRd
+#'
+#' @importFrom shinyjs disabled
+#' @importFrom shinyWidgets prettyCheckbox
+#' @importFrom htmltools tags
+send_invite_checkbox <- function(ns, app_url) {
+  # check if the app has an app url.  If the app has an app_url, allow the
+  # user to send an invite email.
+  if (!is.null(app_url) && !is.na(app_url) && app_url != "") {
+    email_invite_checkbox <- shinyWidgets::prettyCheckbox(
+      ns("send_invite_email"),
+      "Send Invite Email?",
+      value = FALSE,
+      status = "primary"
+    )
+  } else {
+    email_invite_checkbox <- tags$div(
+      tags$span(
+        shinyjs::disabled(shinyWidgets::prettyCheckbox(
+          ns("send_invite_email"),
+          "Send Invite Email?",
+          value = FALSE,
+          status = "primary",
+          inline = TRUE
+        ))
+      ),
+      tags$span(
+        style = "display: inline-block; margin-left: -15px;",
+        id = ns("checkbox_question"),
+        icon("question-circle"),
+        `data-toggle` = "tooltip",
+        `data-placement`= "top",
+        title = "You must set the App URL to send email invites. Go to https://dashboard.polished.tech to set your app URL."
+      )
+    )
+  }
+
+  email_invite_checkbox
+}

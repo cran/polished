@@ -12,9 +12,11 @@ sign_in_ui_default(
     "text-center", h1("Your", style = "margin-bottom: 0; margin-top: 30px;"), h1("Brand",
     style = "margin-bottom: 0; margin-top: 10px;"), h1("Here", style =
     "margin-bottom: 15px; margin-top: 10px;")),
-  logo_bottom = tags$img(src = "polish/images/placeholder_company_logo.jpg", alt =
-    "Placeholder Logo", style = "width: 200px; margin-bottom: 15px; padding-top: 15px;"),
-  icon_href = "polish/images/polished_icon.png"
+  logo_bottom = NULL,
+  icon_href = "polish/images/polished_icon.png",
+  background_image = NULL,
+  terms_and_privacy_footer = NULL,
+  align = "center"
 )
 }
 \arguments{
@@ -29,6 +31,16 @@ sign_in_ui_default(
 \item{logo_bottom}{html for the logo below the sign in panel.}
 
 \item{icon_href}{the url/path to the browser tab icon.}
+
+\item{background_image}{the url/path to a full width background image.  If set to NULL,
+the default, the \code{color} argument will be used for the background instead of this
+image.}
+
+\item{terms_and_privacy_footer}{links to place in the footer, directly above the copyright
+notice.}
+
+\item{align}{The horizontal alignment of the sign in box. Defaults to "center". Valid
+values are "left", "center", or "right"}
 }
 \value{
 the UI for the sign in page

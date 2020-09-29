@@ -13,6 +13,8 @@
 #' @importFrom shiny reactive observeEvent showModal modalDialog modalButton removeModal
 #' @importFrom shinyWidgets pickerInput
 #' @importFrom shinyFeedback showToast
+#' @importFrom httr GET authenticate content status_code
+#' @importFrom jsonlite fromJSON
 #'
 #' @noRd
 #'
@@ -25,11 +27,46 @@ user_edit_module <- function(input, output, session,
 
   ns <- session$ns
 
+  app_url <- reactiveVal(NULL)
+
+  # get the app_url
+  observeEvent(open_modal_trigger(), {
+
+    tryCatch({
+      res <- httr::GET(
+        url = paste0(getOption("polished")$api_url, "/apps"),
+        query = list(
+          app_uid = getOption("polished")$app_uid
+        ),
+        httr::authenticate(
+          user = getOption("polished")$api_key,
+          password = ""
+        )
+      )
+
+      res_content <- jsonlite::fromJSON(
+        httr::content(res, type = "text", encoding = "UTF-8")
+      )
+
+      if (!identical(httr::status_code(res), 200L)) {
+        app_url(NULL)
+        stop(res_content, call. = FALSE)
+      } else {
+        app_url(res_content$app_url)
+      }
+
+    }, error = function(err) {
+      print(err)
+    })
+
+  }, priority = 1)
 
   shiny::observeEvent(open_modal_trigger(), {
     hold_user <- user_to_edit()
+    hold_app_url <- app_url()
 
     if (is.null(hold_user)) {
+      # adding a new user
       is_admin_value  <- "No"
 
       email_input <- shiny::textInput(
@@ -38,7 +75,15 @@ user_edit_module <- function(input, output, session,
         value = if (is.null(hold_user)) "" else hold_user$email
       )
 
+      send_invite_ui <- tagList(
+        br(),
+        send_invite_checkbox(ns, hold_app_url)
+      )
+
+
     } else {
+      # editing and existing user
+
       if (isTRUE(hold_user$is_admin)) {
         is_admin_value <- "Yes"
       } else {
@@ -46,7 +91,11 @@ user_edit_module <- function(input, output, session,
       }
 
       email_input <- NULL
+
+      send_invite_ui <- list()
     }
+
+
 
 
 
@@ -80,7 +129,8 @@ user_edit_module <- function(input, output, session,
             ),
             selected = is_admin_value,
             inline = TRUE
-          )
+          ),
+          send_invite_ui
         ),
         tags$script(src = "polish/js/user_edit_module.js?version=2"),
         tags$script(paste0("user_edit_module('", ns(''), "')"))
@@ -96,7 +146,7 @@ user_edit_module <- function(input, output, session,
   # the firebase function to add the user is triggered in the client side js, not in Shiny
   shiny::observeEvent(input$submit, {
     session_user <- session$userData$user()$user_uid
-    input_email <- input$user_email
+    input_email <- tolower(input$user_email)
     input_is_admin <- input$user_is_admin
 
     is_admin_out <- if (input_is_admin == "Yes") TRUE else FALSE
@@ -113,21 +163,22 @@ user_edit_module <- function(input, output, session,
       tryCatch({
 
         res <- httr::POST(
-          url = paste0(.global_sessions$hosted_url, "/app-users"),
+          url = paste0(getOption("polished")$api_url, "/app-users"),
           body = list(
             email = input_email,
-            app_uid = .global_sessions$app_name,
+            app_uid = getOption("polished")$app_uid,
             is_admin = is_admin_out,
-            req_user_uid = session$userData$user()$user_uid
+            req_user_uid = session$userData$user()$user_uid,
+            send_invite_email = input$send_invite_email
           ),
           httr::authenticate(
-            user = .global_sessions$api_key,
+            user = getOption("polished")$api_key,
             password = ""
           ),
           encode = "json"
         )
 
-        if (res$status_code != 200) {
+        if (!identical(httr::status_code(res), 200L)) {
 
           err <- jsonlite::fromJSON(
             httr::content(res, "text", encoding = "UTF-8")
@@ -137,18 +188,16 @@ user_edit_module <- function(input, output, session,
         }
 
 
-        httr::stop_for_status(res)
-
 
         shiny::removeModal()
 
 
         users_trigger(users_trigger() + 1)
         shinyFeedback::showToast("success", "User successfully added!")
-      }, error = function(e) {
+      }, error = function(err) {
 
-        shinyFeedback::showToast("error", "Error adding user")
-        print(e)
+        shinyFeedback::showToast("error", err$message)
+        print(err)
       })
 
     } else {
@@ -161,21 +210,21 @@ user_edit_module <- function(input, output, session,
 
         # update the app user
         res <- httr::PUT(
-          url = paste0(.global_sessions$hosted_url, "/app-users"),
+          url = paste0(getOption("polished")$api_url, "/app-users"),
           body = list(
             user_uid = hold_user$user_uid,
-            app_uid = .global_sessions$app_name,
+            app_uid = getOption("polished")$app_uid,
             is_admin = is_admin_out,
             req_user_uid = session$userData$user()$user_uid
           ),
           httr::authenticate(
-            user = .global_sessions$api_key,
+            user = getOption("polished")$api_key,
             password = ""
           ),
           encode = "json"
         )
 
-        if (res$status_code != 200) {
+        if (!identical(httr::status_code(res), 200L)) {
 
           err <- jsonlite::fromJSON(
             httr::content(res, "text", encoding = "UTF-8")
@@ -183,9 +232,6 @@ user_edit_module <- function(input, output, session,
 
           stop(err, call. = FALSE)
         }
-
-        httr::stop_for_status(res)
-
 
         users_trigger(users_trigger() + 1)
         shinyFeedback::showToast("success", "User successfully edited!")

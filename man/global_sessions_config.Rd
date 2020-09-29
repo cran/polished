@@ -11,7 +11,8 @@ global_sessions_config(
   admin_mode = FALSE,
   is_invite_required = TRUE,
   api_url = "https://api.polished.tech",
-  sign_in_providers = c("google", "email")
+  sign_in_providers = "email",
+  is_email_verification_required = TRUE
 )
 }
 \arguments{
@@ -38,7 +39,10 @@ invite before registering/signing in}
 \item{api_url}{the API url.  Defaults to "https://api.polished.tech".}
 
 \item{sign_in_providers}{the sign in providers to enable.  Valid values are "google"
-"email", "microsoft", and/or "facebook". Defaults to \code{c("google", "email")}.}
+"email", "microsoft", and/or "facebook". Defaults to \code{"email"}.}
+
+\item{is_email_verification_required}{TRUE by default.  Whether or not to require the user to
+verify their email before accessing your Shiny app.}
 }
 \description{
 This is the primary function for configuring 'polished'.  It configures your app's instance of the

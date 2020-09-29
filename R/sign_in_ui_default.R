@@ -10,6 +10,13 @@
 #' @param logo_top html for logo to go above the sign in panel.
 #' @param logo_bottom html for the logo below the sign in panel.
 #' @param icon_href the url/path to the browser tab icon.
+#' @param background_image the url/path to a full width background image.  If set to NULL,
+#' the default, the \code{color} argument will be used for the background instead of this
+#' image.
+#' @param terms_and_privacy_footer links to place in the footer, directly above the copyright
+#' notice.
+#' @param align The horizontal alignment of the sign in box. Defaults to "center". Valid
+#' values are "left", "center", or "right"
 #'
 #' @export
 #'
@@ -30,19 +37,54 @@ sign_in_ui_default <- function(
     h1("Brand", style = "margin-bottom: 0; margin-top: 10px;"),
     h1("Here", style = "margin-bottom: 15px; margin-top: 10px;")
   ),
-  logo_bottom = tags$img(
-    src = "polish/images/placeholder_company_logo.jpg",
-    alt = "Placeholder Logo",
-    style = "width: 200px; margin-bottom: 15px; padding-top: 15px;"
-  ),
-  icon_href = "polish/images/polished_icon.png"
+  logo_bottom = NULL,
+  icon_href = "polish/images/polished_icon.png",
+  background_image = NULL,
+  terms_and_privacy_footer = NULL,
+  align = "center"
 ) {
+
+  if (is.null(background_image)) {
+    background_image_css <-  stringr::str_interp("")
+  } else {
+    background_image_css <- stringr::str_interp("
+      background-image: url(${background_image});
+      background-repeat: no-repeat;
+      background-position: 0 0;
+      background-size: cover;
+    ")
+  }
+
+  if (length(align) != 1 && !(align %in% c("left", "center", "right"))) {
+    stop('`align` must be either "lect", "center", or "right"', call. = FALSE)
+  }
+
+  if (is.null(terms_and_privacy_footer)) {
+    footer_margin <- -40
+  } else {
+    footer_margin <- -68
+  }
+
+
+  if (align == "center") {
+    left_col <- list()
+    main_width <- 12
+    right_col <- list()
+  } else if (align == "left") {
+    left_col <- list()
+    main_width <- 6
+    right_col <- column(6)
+  } else {
+    left_col <- column(6)
+    main_width <- 6
+    right_col <- list()
+  }
 
   shiny::fluidPage(
     style = "height: 100vh;",
     tags$head(
-      tags$title("Polished"),
       tags$link(rel = "shortcut icon", href = icon_href),
+      tags$title(company_name),
       tags$meta(
         name = "viewport",
         content = "
@@ -56,12 +98,23 @@ sign_in_ui_default <- function(
       tags$style(
         stringr::str_interp("
         .auth_panel {
-          width: 300px;
-          max-width: 100%;
+          width: 100%;
+          max-width: 300px;
           padding: 10px 25px;
           background-color: #fff;
           color: #080021;
-          z-index: 20000;
+          margin: 0 auto;
+          box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+        }
+
+        .auth_panel_2 {
+          width: 100%;
+          max-width: 600px;
+          padding: 10px 25px;
+          background-color: #fff;
+          color: #080021;
+          margin: 0 auto;
+          box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
         }
 
         .btn-primary {
@@ -75,11 +128,12 @@ sign_in_ui_default <- function(
           color: #FFF;
           text-align: center;
           z-index: 1;
-          margin-top: -40px;
+          margin-top: ${footer_margin}px;
         }
 
         body {
           background-color: ${color} !important;
+          ${background_image_css}
         }
 
       ")
@@ -87,24 +141,24 @@ sign_in_ui_default <- function(
     ),
     shiny::fluidRow(
       style = "padding-bottom: 50px; min-height: 100%;",
+      left_col,
       shiny::column(
-        width = 12,
+        width = main_width,
         align = "center",
         logo_top,
-        sign_in_module,
         tags$div(
-          style = "width: 300px; max-width: 100%; background-color: #FFF",
-          tags$hr(style="padding: 0; margin: 0;"),
+          sign_in_module,
           logo_bottom
         )
-      )
+      ),
+      right_col
     ),
     shiny::fluidRow(
       shiny::column(
         12,
         class = "footer",
+        terms_and_privacy_footer,
         tags$p(
-          style = "color: #FFF; text-align: center;",
           htmltools::HTML("&copy;"),
           paste0(
             substr(Sys.Date(), 1, 4),

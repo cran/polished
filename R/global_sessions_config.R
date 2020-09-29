@@ -22,9 +22,14 @@
 #' invite before registering/signing in
 #' @param api_url the API url.  Defaults to "https://api.polished.tech".
 #' @param sign_in_providers the sign in providers to enable.  Valid values are "google"
-#' "email", "microsoft", and/or "facebook". Defaults to \code{c("google", "email")}.
+#' "email", "microsoft", and/or "facebook". Defaults to \code{"email"}.
+#' @param is_email_verification_required TRUE by default.  Whether or not to require the user to
+#' verify their email before accessing your Shiny app.
 #'
 #' @export
+#'
+#' @importFrom httr GET authenticate content status_code
+#' @importFrom jsonlite fromJSON
 #'
 #' @examples
 #'
@@ -45,20 +50,61 @@ global_sessions_config <- function(
   admin_mode = FALSE,
   is_invite_required = TRUE,
   api_url = "https://api.polished.tech",
-  sign_in_providers = c(
-    "google",
-    "email"
-  )
+  sign_in_providers = "email",
+  is_email_verification_required = TRUE
 ) {
 
-  .global_sessions$config(
+  if (!(length(api_key) == 1 && is.character(api_key))) {
+    stop("invalid `api_key` argument passed to `global_sessions_config()`", call. = FALSE)
+  }
+
+  if (!(length(api_url) == 1 && is.character(api_url))) {
+    stop("invalid `api_url` argument passed to `global_sessions_config()`", call. = FALSE)
+  }
+
+  # get the app uid
+  res <- httr::GET(
+    url = paste0(api_url, "/apps"),
+    query = list(
+      app_name = app_name
+    ),
+    httr::authenticate(
+      user = api_key,
+      password = ""
+    )
+  )
+
+  app <- jsonlite::fromJSON(
+    httr::content(res, "text", encoding = "UTF-8")
+  )
+
+  if (!identical(httr::status_code(res), 200L)) {
+    stop(app, call. = FALSE)
+  }
+
+  if (length(app) == 0) {
+    stop(paste0("app_name `", app_name, "` does not exist"), call. = FALSE)
+  }
+
+  # create app display name.  Creating this here and setting it in options will
+  # make it easy to reuse in various locations without repeating code.
+  app_name_display <- gsub("[_|-]", " ", app_name)
+  app_name_display <- tools::toTitleCase(app_name_display)
+
+  options("polished" = list(
+    api_key = api_key,
+    api_url = api_url,
+    app_uid = app$uid,
     app_name = app_name,
+    app_name_display = app_name_display
+  ))
+
+  .global_sessions$config(
     firebase_config = firebase_config,
     admin_mode = admin_mode,
     is_invite_required = is_invite_required,
-    api_key = api_key,
-    api_url = api_url,
-    sign_in_providers = sign_in_providers
+    sign_in_providers = sign_in_providers,
+    is_email_verification_required = is_email_verification_required
   )
 
 }

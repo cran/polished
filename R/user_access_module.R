@@ -16,6 +16,13 @@ user_access_module_ui <- function(id) {
   shinydashboard::tabItem(
     tabName = "user_access",
     shiny::fluidRow(
+      tags$style(
+        paste0(
+          "#", ns('users_table'), " .dataTables_length {
+            padding-top: 10px;
+          }"
+        )
+      ),
       shinydashboard::box(
         width = 12,
         title = "Users",
@@ -61,12 +68,13 @@ user_access_module_ui <- function(id) {
 #'
 #' @importFrom shiny showModal modalDialog removeModal reactiveVal reactive observeEvent callModule req eventReactive
 #' @importFrom htmltools tags
-#' @importFrom DT renderDT datatable dataTableProxy formatDate replaceData
+#' @importFrom DT renderDT datatable dataTableProxy formatDate replaceData JS
 #' @importFrom dplyr filter select %>% left_join mutate
 #' @importFrom tibble tibble
 #' @importFrom shinyFeedback showToast
 #' @importFrom purrr map_chr
 #' @importFrom lubridate force_tz
+#' @importFrom rlang .data
 #'
 #' @noRd
 #'
@@ -78,18 +86,18 @@ user_access_module <- function(input, output, session) {
   users <- reactive({
     users_trigger()
 
-    hold_app_name <- .global_sessions$app_name
+    hold_app_name <- getOption("polished")$app_uid
 
     out <- NULL
     tryCatch({
 
       res <- httr::GET(
-        url = paste0(.global_sessions$hosted_url, "/app-users"),
+        url = paste0(getOption("polished")$api_url, "/app-users"),
         query = list(
-          app_uid = hold_app_name
+          app_uid = getOption("polished")$app_uid
         ),
         httr::authenticate(
-          user = .global_sessions$api_key,
+          user = getOption("polished")$api_key,
           password = ""
         )
       )
@@ -117,12 +125,12 @@ user_access_module <- function(input, output, session) {
 
 
       res <- httr::GET(
-        url = paste0(.global_sessions$hosted_url, "/last-active-session-time"),
+        url = paste0(getOption("polished")$api_url, "/last-active-session-time"),
         query = list(
-          app_uid = hold_app_name
+          app_uid = getOption("polished")$app_uid
         ),
         httr::authenticate(
-          user = .global_sessions$api_key,
+          user = getOption("polished")$api_key,
           password = ""
         )
       )
@@ -231,9 +239,9 @@ user_access_module <- function(input, output, session) {
       ),
       escape = -1,
       selection = "none",
-      callback = JS("$( table.table().container() ).addClass( 'table-responsive' ); return table;"),
+      callback = DT::JS("$( table.table().container() ).addClass( 'table-responsive' ); return table;"),
       options = list(
-        dom = 'ftp',
+        dom = 'ftlp',
         columnDefs = list(
           list(targets = 0, orderable = FALSE),
           list(targets = 0, class = "dt-center"),
@@ -246,7 +254,7 @@ user_access_module <- function(input, output, session) {
 
   users_proxy <- DT::dataTableProxy("users_table")
 
-  add_user_return <- callModule(
+  add_user_return <- shiny::callModule(
     user_edit_module,
     "add_user",
     modal_title = "Add User",
@@ -270,7 +278,7 @@ user_access_module <- function(input, output, session) {
     user_to_edit(out)
   }, priority = 1)
 
-  edit_user_return <- callModule(
+  edit_user_return <- shiny::callModule(
     user_edit_module,
     "edit_user",
     modal_title = "Edit User",
@@ -340,19 +348,19 @@ user_access_module <- function(input, output, session) {
     shiny::removeModal()
 
     user_uid <- user_to_delete()$user_uid
-    app_uid <- .global_sessions$app_name
+    app_uid <- getOption("polished")$app_uid
 
     tryCatch({
 
       res <- httr::DELETE(
-        url = paste0(.global_sessions$hosted_url, "/app-users"),
+        url = paste0(getOption("polished")$api_url, "/app-users"),
         body = list(
           user_uid = user_uid,
           app_uid = app_uid,
           req_user_uid = session$userData$user()$user_uid
         ),
         httr::authenticate(
-          user = .global_sessions$api_key,
+          user = getOption("polished")$api_key,
           password = ""
         ),
         encode = "json"
@@ -378,14 +386,6 @@ user_access_module <- function(input, output, session) {
       filter(.data$user_uid == input$sign_in_as_btn_user_uid) %>%
       dplyr::pull("user_uid")
 
-
-    session$sendCustomMessage(
-      "polish__show_loading",
-      message = list(
-        text = "Loading..."
-      )
-    )
-
     # sign in as another user
     .global_sessions$set_signed_in_as(
       hold_user$session_uid,
@@ -394,7 +394,7 @@ user_access_module <- function(input, output, session) {
     )
 
     # to to the Shiny app
-    remove_query_string(session)
+    remove_query_string(mode = "push")
 
     session$reload()
   }, ignoreInit = TRUE)
