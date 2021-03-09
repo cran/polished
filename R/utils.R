@@ -1,11 +1,11 @@
 #' Remove the URL query
 #'
-#' Remove the entire query string from the url.  This function should only be called
-#' inside the server function of your 'shiny' app.
+#' Remove the entire query string from the URL.  This function should only be called
+#' inside the server function of your Shiny app.
 #'
-#' @param session the Shiny session
+#' @param session the Shiny \code{session}
 #' @param mode the mode to pass to \code{shiny::updateQueryString()}.  Valid values are
-#' "replace" or "push".
+#' \code{"replace"} or \code{"push"}.
 #'
 #' @importFrom shiny updateQueryString getDefaultReactiveDomain
 #'
@@ -98,4 +98,70 @@ send_invite_checkbox <- function(ns, app_url) {
   }
 
   email_invite_checkbox
+}
+
+#' @noRd
+#'
+#' Default `.options` for `showToast`
+polished_toast_options <- list(
+  positionClass = "toast-top-center",
+  showDuration = 1000,
+  newestOnTop = TRUE
+)
+
+#' is_valid_email
+#'
+#' function for email validation (Sign in & Registration)
+#'
+#' @noRd
+#'
+is_valid_email <- function(x) {
+  grepl("^\\s*[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}\\s*$", as.character(x), ignore.case=TRUE)
+}
+
+
+#' is_email_registered
+#'
+#' Check if an email address is already registered.  This function is used in our
+#' sign in modules to redirect the user from the sign in inputs to the registration
+#' inputs if the user is attempting to sign in before they have registered.
+#'
+#' @param email the email address to check
+#'
+#' @return boolean - whether of not the email is already registered with the polished
+#' account
+#'
+#' @noRd
+#'
+is_email_registered <- function(email) {
+
+  user_res <- httr::GET(
+    paste0(getOption("polished")$api_url, "/users"),
+    query = list(
+      email = email
+    ),
+    httr::authenticate(
+      user = getOption("polished")$api_key,
+      password = ""
+    ),
+    config = list(http_version = 0)
+  )
+
+  user_res_content <- jsonlite::fromJSON(
+    httr::content(user_res, "text", encoding = "UTF-8")
+  )
+
+  if (!identical(httr::status_code(user_res), 200L)) {
+    print(user_res_content)
+    stop("error checking user registration", .call = FALSE)
+  }
+
+  if (isFALSE(user_res_content$email_verified) && isFALSE(user_res_content$email_verified)) {
+    out <- FALSE
+  } else {
+    out <- TRUE
+  }
+
+
+  out
 }

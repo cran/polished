@@ -25,24 +25,24 @@ sign_in_js <- function(ns) {
     firebase_deps <- htmltools::tagList(
       firebase_dependencies(),
       firebase_init(firebase_config),
-      tags$script(src = "polish/js/auth_firebase.js?version=3"),
+      tags$script(src = "polish/js/auth_firebase.js?version=4"),
       tags$script(paste0("auth_firebase('", ns(''), "')"))
     )
   }
 
   htmltools::tagList(
-    shinyFeedback::useShinyFeedback(feedback = FALSE),
+    shinyFeedback::useShinyFeedback(),
     tags$script(src = "polish/js/toast_options.js"),
     tags$script(src = "https://cdn.jsdelivr.net/npm/js-cookie@2/src/js.cookie.min.js"),
     firebase_deps,
-    tags$script(src = "polish/js/auth_main.js?version=3"),
+    tags$script(src = "polish/js/auth_main.js?version=4"),
     tags$script(paste0("auth_main('", ns(''), "')"))
   )
 }
 
 #' Check the JWT from the user sign in
 #'
-#' This function retreives the JWT created by the JavaScript from \code{\link{sign_in_js}}
+#' This function retrieves the JWT created by the JavaScript from \code{\link{sign_in_js}}
 #' and signs the user in as long as the token can be verified.
 #' This function should be called in the server function of a shiny module.  Make sure
 #' to call \code{\link{sign_in_js}} in the UI function of this module.
@@ -76,7 +76,8 @@ sign_in_check_jwt <- function(jwt, session = shiny::getDefaultReactiveDomain()) 
           shinyFeedback::resetLoadingButton('sign_in_submit')
           shinyFeedback::showToast(
             "info",
-            "Password reset required.  Check your email to reset your password."
+            "Password reset required.  Check your email to reset your password.",
+            .options = polished_toast_options
           )
           return()
         }
@@ -92,7 +93,11 @@ sign_in_check_jwt <- function(jwt, session = shiny::getDefaultReactiveDomain()) 
       if (is.null(new_user)) {
         shinyFeedback::resetLoadingButton('sign_in_submit')
         # show unable to sign in message
-        shinyFeedback::showToast('error', 'sign in error')
+        shinyFeedback::showToast(
+          'error',
+          'sign in error',
+          .options = polished_toast_options
+        )
         stop('sign_in_module: sign in error', call. = FALSE)
 
       } else {
@@ -105,7 +110,11 @@ sign_in_check_jwt <- function(jwt, session = shiny::getDefaultReactiveDomain()) 
       shinyFeedback::resetLoadingButton('sign_in_submit')
       print(err)
 
-      shinyFeedback::showToast("error", err$message)
+      shinyFeedback::showToast(
+        "error",
+        err$message,
+        .options = polished_toast_options
+      )
 
     })
 

@@ -1,12 +1,14 @@
-#' Sign our from your 'shiny' app
+#' Sign Out from your Shiny app
 #'
-#' Call this function to sign a user out of your 'shiny' app.  This function should
-#' be called inside the server function of your 'shiny' app.  See
+#' Call this function to sign a user out of your Shiny app.  This function should
+#' be called inside the server function of your Shiny app.  See
 #' \url{https://github.com/Tychobra/polished/blob/master/inst/examples/polished_example_01/server.R}
 #' For an example of this function being called after the user clicks a "Sign Out"
 #' button.
 #'
-#' @param session the Shiny session
+#' @param session the Shiny \code{session}
+#' @param redirect_page the query string for the page that the user should be redirected
+#' to after signing out.
 #'
 #' @export
 #'
@@ -14,9 +16,13 @@
 #'
 #'
 #'
-sign_out_from_shiny <- function(session = shiny::getDefaultReactiveDomain()) {
+sign_out_from_shiny <- function(
+  session = shiny::getDefaultReactiveDomain(),
+  redirect_page = "?page=sign_in"
+) {
 
-  user <- session$userData$user()
+  # using isolate() allows this function to be called in onStop()
+  user <- isolate(session$userData$user())
 
   if (is.null(user)) stop("session$userData$user() does not exist", call. = FALSE)
 
@@ -25,9 +31,12 @@ sign_out_from_shiny <- function(session = shiny::getDefaultReactiveDomain()) {
 
   # set query string to sign in page
   shiny::updateQueryString(
-    queryString = paste0("?page=sign_in"),
+    queryString = redirect_page,
     session = session,
     mode = "replace"
   )
 
 }
+
+
+

@@ -1,16 +1,16 @@
-#' Secure your 'shiny' app's server
+#' Secure your Shiny app's server
 #'
-#' This function is used to secure your 'shiny' app's server function.  Make sure to pass
-#' your 'shiny' app's server function as the first argument to \code{secure_server()} at
-#' the bottom of your 'shiny' app's "server.R" file.
+#' This function is used to secure your Shiny app's server function.  Make sure to pass
+#' your Shiny app's server function as the first argument to \code{secure_server()} at
+#' the bottom of your Shiny app's \code{server.R} file.
 #'
 #' @param server A Shiny server function (e.g \code{function(input, output, session) {}})
 #' @param custom_admin_server Either \code{NULL}, the default, or a Shiny module server function containing your custom admin
 #' server functionality.
 #' @param custom_sign_in_server Either \code{NULL}, the default, or a Shiny module server containing your custom
 #' sign in server logic.
-#' @param allow_reconnect argument to pass to the 'shiny' \code{session$allowReconnect()} function. Defaults to
-#' \code{FALSE}.  Set to \code{TRUE} to allow reconnect with shiny-server and Rstudio Connect.  Set to "force"
+#' @param allow_reconnect argument to pass to the Shiny \code{session$allowReconnect()} function. Defaults to
+#' \code{FALSE}.  Set to \code{TRUE} to allow reconnect with shiny-server and Rstudio Connect.  Set to \code{"force"}
 #' for local testing.  See \url{https://shiny.rstudio.com/articles/reconnecting.html} for more information.
 #' @param account_module the server code for the user account module.
 #' @param splash_module the server code for the splash page.
@@ -74,8 +74,9 @@ secure_server <- function(
         # user is not signed in
 
         # if the user is not on the sign in page, redirect to sign in and reload
-        if (!identical(page, "sign_in") || (is.null(splash_module) && is.null(page))
-        ) {
+        if ((!identical(page, "sign_in") || (is.null(splash_module) && is.null(page))) &&
+            isTRUE(.global_sessions$is_auth_required)) {
+
           shiny::updateQueryString(
             queryString = paste0("?page=sign_in"),
             session = session,
@@ -197,15 +198,19 @@ secure_server <- function(
         } else if (is.null(query_list$page)) {
 
           # go to the custom app
-          server(input, output, session)
-
-          if (isTRUE(hold_user$is_admin)) {
-            # go to admin panel button
-            shiny::callModule(
-              admin_button,
-              "polished"
-            )
+          if (isTRUE(.global_sessions$is_auth_required)) {
+            server(input, output, session)
           }
+
+
+
+          # go to admin panel button.  Must load this whether or not the user is an
+          # admin so that if an admin is signed in as a non admin, they can still
+          # click the button to return to the admin panel.
+          shiny::callModule(
+            admin_button,
+            "polished"
+          )
 
 
           # set the session to inactive when the session ends
@@ -242,6 +247,10 @@ secure_server <- function(
     }, once = TRUE)
 
 
+    if (isFALSE(.global_sessions$is_auth_required)) {
+      server(input, output, session)
+    }
+
     # load up the sign in module server logic if the user in on "sign_in" page
 
     observeEvent(session$userData$user(), {
@@ -272,17 +281,20 @@ secure_server <- function(
           }
 
         }
-      } else if (is.null(page) && !is.null(splash_module)) {
+      } else if (is.null(page)) {
 
-        if (names(formals(splash_module))[[1]] == "id") {
-          splash_module("splash")
-        } else {
-          callModule(
-            splash_module,
-            "splash"
-          )
+        if (!is.null(splash_module) && isTRUE(isFALSE(.global_sessions$is_auth_required))) {
+
+          if (names(formals(splash_module))[[1]] == "id") {
+            splash_module("splash")
+          } else {
+            callModule(
+              splash_module,
+              "splash"
+            )
+          }
+
         }
-
       }
 
     }, ignoreNULL = FALSE, once = TRUE)

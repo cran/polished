@@ -52,6 +52,11 @@ user_access_module_ui <- function(id) {
               )
           )
         )
+      ),
+      shiny::column(
+        12,
+        br(),
+        br()
       )
     ),
     # users table
@@ -73,7 +78,7 @@ user_access_module_ui <- function(id) {
 #' @importFrom tibble tibble
 #' @importFrom shinyFeedback showToast
 #' @importFrom purrr map_chr
-#' @importFrom lubridate force_tz
+#' @importFrom lubridate force_tz as_datetime
 #' @importFrom rlang .data
 #'
 #' @noRd
@@ -99,7 +104,8 @@ user_access_module <- function(input, output, session) {
         httr::authenticate(
           user = getOption("polished")$api_key,
           password = ""
-        )
+        ),
+        config = list(http_version = 0)
       )
 
       httr::stop_for_status(res)
@@ -132,7 +138,8 @@ user_access_module <- function(input, output, session) {
         httr::authenticate(
           user = getOption("polished")$api_key,
           password = ""
-        )
+        ),
+        config = list(http_version = 0)
       )
 
       httr::stop_for_status(res)
@@ -150,7 +157,7 @@ user_access_module <- function(input, output, session) {
       }
 
       last_active_times <- last_active_times %>%
-        mutate(last_sign_in_at = lubridate::force_tz(as.POSIXct(.data$last_sign_in_at), tzone = "UTC"))
+        mutate(last_sign_in_at = lubridate::force_tz(lubridate::as_datetime((.data$last_sign_in_at)), tzone = "UTC"))
 
       out <- app_users %>%
         left_join(last_active_times, by = 'user_uid')
@@ -160,7 +167,11 @@ user_access_module <- function(input, output, session) {
       print("[polished] error")
       print(err)
 
-      showToast("error", "Error retrieving app users from API")
+      showToast(
+        "error",
+        "Error retrieving app users from API",
+        .options = polished_toast_options
+      )
     })
 
     out
@@ -246,7 +257,14 @@ user_access_module <- function(input, output, session) {
           list(targets = 0, orderable = FALSE),
           list(targets = 0, class = "dt-center"),
           list(targets = 0, width = "105px")
-        )
+        ),
+        order = list(
+          list(4, 'desc')
+        ),
+        # removes any lingering tooltips
+        drawCallback = JS("function(settings) {
+          $('.tooltip').remove();
+        }")
       )
     ) %>%
       DT::formatDate(5, method = "toLocaleString")
@@ -363,15 +381,24 @@ user_access_module <- function(input, output, session) {
           user = getOption("polished")$api_key,
           password = ""
         ),
-        encode = "json"
+        encode = "json",
+        config = list(http_version = 0)
       )
 
       httr::stop_for_status(res)
 
-      shinyFeedback::showToast("success", "User successfully deleted")
+      shinyFeedback::showToast(
+        "success",
+        "User successfully deleted",
+        .options = polished_toast_options
+      )
       users_trigger(users_trigger() + 1)
     }, error = function(e) {
-      shinyFeedback::showToast("error", "Error deleting user")
+      shinyFeedback::showToast(
+        "error",
+        "Error deleting user",
+        .options = polished_toast_options
+      )
       print(e)
     })
 

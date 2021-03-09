@@ -1,13 +1,8 @@
 default:
   app_name: "polished_example_01"
-  api_key: "eOl5hsOcGKOEev1F8OKtMcBtfw7ts5eJm1"
+  api_key: "ybb5sptUuidLW51arHrCmH3bDVoL1XXcGa"
+  api_url: "https://api-dev.polished.tech"
 
-axion:
-  db:
-    dbname: "maestroz-app-prod"
-    host: "127.0.0.1"
-    port: 5432
-    user: "maestrozwebsrv"
-    password: "BitY6Jri#*Li"
-  firebase:
-    projectId: "z-connect-e6765"
+production:
+  api_key: "eOl5hsOcGKOEev1F8OKtMcBtfw7ts5eJm1"
+  api_url: "https://api.polished.tech"

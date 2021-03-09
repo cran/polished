@@ -10,7 +10,7 @@
 #' does not add a user that already exists.
 #'
 #'
-#' @importFrom shiny reactive observeEvent showModal modalDialog modalButton removeModal
+#' @importFrom shiny reactive observeEvent showModal modalDialog modalButton removeModal HTML
 #' @importFrom shinyWidgets pickerInput
 #' @importFrom shinyFeedback showToast
 #' @importFrom httr GET authenticate content status_code
@@ -41,7 +41,8 @@ user_edit_module <- function(input, output, session,
         httr::authenticate(
           user = getOption("polished")$api_key,
           password = ""
-        )
+        ),
+        config = list(http_version = 0)
       )
 
       res_content <- jsonlite::fromJSON(
@@ -136,6 +137,29 @@ user_edit_module <- function(input, output, session,
         tags$script(paste0("user_edit_module('", ns(''), "')"))
       )
     )
+
+    if (!is.null(email_input)) {
+
+      observeEvent(input$user_email, {
+
+        hold_email <- tolower(input$user_email)
+
+        if (is_valid_email(hold_email)) {
+          shinyFeedback::hideFeedback("user_email")
+          shinyjs::enable("submit")
+        } else {
+          shinyjs::disable("submit")
+          if (hold_email != "") {
+            shinyFeedback::showFeedbackDanger(
+              "user_email",
+              text = "Invalid email"
+            )
+          } else {
+            shinyFeedback::hideFeedback("user_email")
+          }
+        }
+      })
+    }
   })
 
 
@@ -175,7 +199,8 @@ user_edit_module <- function(input, output, session,
             user = getOption("polished")$api_key,
             password = ""
           ),
-          encode = "json"
+          encode = "json",
+          config = list(http_version = 0)
         )
 
         if (!identical(httr::status_code(res), 200L)) {
@@ -193,10 +218,47 @@ user_edit_module <- function(input, output, session,
 
 
         users_trigger(users_trigger() + 1)
-        shinyFeedback::showToast("success", "User successfully added!")
+        shinyFeedback::showToast(
+          "success",
+          "User successfully added!",
+          .options = polished_toast_options
+        )
       }, error = function(err) {
 
-        shinyFeedback::showToast("error", err$message)
+        if (err$message == "unique user limit exceeded") {
+          shinyFeedback::showToast(
+            "error",
+            shiny::HTML(
+              paste0(
+                tags$div(
+                  class = "text-center",
+                  "Unique User Limit Exceeded!",
+                  tags$br(),
+                  "For unlimited users, enable billing in the ",
+                  tags$a(
+                    href = "https://dashboard.polished.tech",
+                    target = "_blank",
+                    tags$b("Polished Dashboard"),
+                    shiny::icon("external-link-alt")
+                  )
+                )
+              )
+            ),
+            .options = list(
+              positionClass = "toast-top-center",
+              newestOnTop = TRUE,
+              timeOut = 0,
+              extendedTimeOut = 0
+            )
+          )
+        } else {
+          shinyFeedback::showToast(
+            "error",
+            err$message,
+            .options = polished_toast_options
+          )
+        }
+
         print(err)
       })
 
@@ -221,7 +283,8 @@ user_edit_module <- function(input, output, session,
             user = getOption("polished")$api_key,
             password = ""
           ),
-          encode = "json"
+          encode = "json"#,
+          #config = list(http_version = 0)
         )
 
         if (!identical(httr::status_code(res), 200L)) {
@@ -234,10 +297,18 @@ user_edit_module <- function(input, output, session,
         }
 
         users_trigger(users_trigger() + 1)
-        shinyFeedback::showToast("success", "User successfully edited!")
+        shinyFeedback::showToast(
+          "success",
+          "User successfully edited!",
+          .options = polished_toast_options
+        )
       }, error = function(e) {
 
-        shinyFeedback::showToast("error", "Error editing user")
+        shinyFeedback::showToast(
+          "error",
+          "Error editing user",
+          .options = polished_toast_options
+        )
         print(e)
 
       })
