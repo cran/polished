@@ -31,8 +31,6 @@ valid_gcp_regions <- c(
 #' @param app_name You Shiny app's name.
 #' @param app_dir The path to the directory containing your Shiny app.
 #' @param api_key Your polished.tech API key.  Defaults to \code{getOption("polished")$api_key}.
-#' @param api_url The Polished API url.  Defaults to "https://host-api.polished.tech".  You should
-#' not change from the default unless you are testing a development version of the API.
 #' @param launch_browser Whether or not to open your default browser to your newly deployed app
 #' after it is successfully deployed.  \code{TRUE} by default.
 #' @param region the region to deploy the app to on Google Cloud Platform.  See
@@ -46,9 +44,13 @@ valid_gcp_regions <- c(
 #' supported by an r-ver Docker image.  You can see all the r-ver Docker image versions
 #' of R here \url{https://github.com/rocker-org/rocker-versioned2/tree/master/dockerfiles} and here
 #' \code{https://github.com/rocker-org/rocker-versioned/tree/master/r-ver}.
+#' @param tlmgr a character vector of TeX Live packages to install.  This is only used if your Shiny
+#' app generates pdf documents.  Defaults to \code{character(0)} for no TeX Live installation.  Set to
+#' \code{TRUE} for a minimal TeX Live installation, and pass a character vector of your TeX Live package
+#' dependencies to have all your TeX Live packages installed at build time.
 #'
 #' @importFrom utils browseURL
-#' @importFrom httr POST authenticate config status_code content upload_file
+#' @importFrom httr POST authenticate status_code content upload_file
 #' @importFrom jsonlite fromJSON
 #'
 #' @export
@@ -68,12 +70,16 @@ deploy_app <- function(
   app_name,
   app_dir = ".",
   api_key = getOption("polished")$api_key,
-  api_url = "https://host-api.polished.tech",
   launch_browser = TRUE,
   region = "us-east1",
   ram_gb = 2,
-  r_ver = NULL
+  r_ver = NULL,
+  tlmgr = character(0)
 ) {
+
+  if (identical(Sys.getenv("SHINY_HOSTING"), "polished")) {
+    stop("You cannot run `polished::deploy_app()` from Polished Hosting.", call. = FALSE)
+  }
 
   if (!(region %in% valid_gcp_regions)) {
     stop(paste0(
@@ -104,15 +110,23 @@ deploy_app <- function(
   cat(" Done\n")
 
   cat("Deploying App.  Hang tight.  This may take a while...\n")
-  cat("Your Shiny app will open in your default web browser once deployment is complete.\n")
+  if (isTRUE(launch_browser)) {
+    cat("Your Shiny app will open in your default web browser once deployment is complete.\n")
+  }
   cat("Deployment status can be found at https://dashboard.polished.tech")
   zip_to_send <- httr::upload_file(
     path = app_zip_path,
     type = "application/x-gzip"
   )
 
+  url_ <- paste0(getOption("polished")$host_api_url, "/hosted-apps")
+  # reset the handle.  This allows us to redeploy the app after a failed deploy.  Without
+  # resetting the handle, the request sometimes does not go through.  It just sits there
+  # doing nothing...
+  httr::handle_reset(url = url_)
+
   res <- httr::POST(
-    url = paste0(api_url, "/deploy-app"),
+    url = url_,
     httr::authenticate(
       user = api_key,
       password = ""
@@ -124,30 +138,29 @@ deploy_app <- function(
       app_name = app_name,
       region = region,
       ram_gb = ram_gb,
-      r_ver = r_ver
+      r_ver = r_ver,
+      tlmgr = paste(tlmgr, collapse = ",")
     ),
     encode = "multipart",
-    http_version = 0
+    http_version = 0,
+    # timeout after 30 minutes
+    timeout = 1800
   )
 
-  res_content <- jsonlite::fromJSON(
-    httr::content(res, "text", encoding = "UTF-8")
-  )
 
-  hold_status <- httr::status_code(res)
+  out <- polished_api_res(res)
+
+  hold_status <- httr::status_code(out$response)
   if (identical(hold_status, 200L)) {
     cat(" Done\n")
 
     if (isTRUE(launch_browser)) {
       # launch user's browser with newly deployed Shiny app
-      utils::browseURL(res_content$url)
+      utils::browseURL(out$content$url)
     }
   }
 
-  list(
-    status = hold_status,
-    content = res_content
-  )
+  out
 }
 
 
@@ -164,6 +177,7 @@ deploy_app <- function(
 #'
 #' @importFrom yaml write_yaml
 #' @importFrom utils tar
+#' @importFrom uuid UUIDgenerate
 #'
 #' @examples
 #'
@@ -188,23 +202,109 @@ bundle_app <- function (
 
   tar_name <- "shiny_app.tar.gz"
 
-  bundles_dir <- tempdir()
+  temp_dir <- tempdir()
+  bundles_dir <- file.path(temp_dir, uuid::UUIDgenerate())
+  dir.create(bundles_dir)
 
   file <- file.path(bundles_dir, tar_name)
 
+
+  # these folders/files will be removed before deploying app
+  patterns_to_remove <- c(
+    "^(?!\\.Rproj\\.user)",
+    "^(?!\\.Rhistory)",
+    "^(?!\\.git)"
+  )
+
+  dir_copy(
+    from = app_dir,
+    to = bundles_dir,
+    pattern = patterns_to_remove
+  )
+
+
   current_wd <- getwd()
-  setwd(app_dir)
+  setwd(bundles_dir)
   on.exit({setwd(current_wd)}, add = TRUE)
+
   result <- utils::tar(
     tarfile = file,
+    files = ".",
     compression = "gzip",
     tar = "internal"
   )
 
   if (result != 0) {
-    stop("Failed to bundle the Shiny app.")
+    stop("Failed to bundle the Shiny app.", call. = FALSE)
   }
 
   file
 }
 
+# the following functions are copied from the packrat R package with only minor changes.
+# Original code is here: https://github.com/rstudio/packrat/blob/ae5e5abedc84ea5fc58335d9c4a17b295c6f48f7/R/utils.R#L85
+
+is_dir <- function(file) {
+  isTRUE(file.info(file)$isdir) ## isTRUE guards against NA (ie, missing file)
+}
+
+# Copy a directory at file location 'from' to location 'to' -- this is kludgey,
+# but file.copy does not handle copying of directories cleanly
+dir_copy <- function(from, to, overwrite = TRUE, all.files = TRUE,
+                     pattern = NULL, ignore.case = TRUE) {
+
+  #owd <- getwd()
+  #on.exit(setwd(owd), add = TRUE)
+
+  # Make sure we're doing sane things
+  if (!is_dir(from)) stop("'", from, "' is not a directory.")
+
+  if (file.exists(to)) {
+    if (overwrite) {
+      unlink(to, recursive = TRUE)
+    } else {
+      stop(paste( sep = "",
+                  if (is_dir(to)) "Directory" else "File",
+                  " already exists at path '", to, "'."
+      ))
+    }
+  }
+
+  success <- dir.create(to, recursive = TRUE)
+  if (!success) stop("Couldn't create directory '", to, "'.")
+
+  # Get relative file paths
+  files.relative <- list.files(from, all.files = all.files, full.names = FALSE,
+                               recursive = TRUE, no.. = TRUE)
+
+  # Apply the pattern to the files
+  if (!is.null(pattern)) {
+    files.relative <- Reduce(intersect, lapply(pattern, function(p) {
+      grep(
+        pattern = p,
+        x = files.relative,
+        ignore.case = ignore.case,
+        perl = TRUE,
+        value = TRUE
+      )
+    }))
+  }
+
+  # Get paths from and to
+  files.from <- file.path(from, files.relative)
+  files.to <- file.path(to, files.relative)
+
+  # Create the directory structure
+  dirnames <- unique(dirname(files.to))
+  sapply(dirnames, function(x) dir.create(x, recursive = TRUE, showWarnings = FALSE))
+
+  # Copy the files
+  res <- file.copy(files.from, files.to)
+  if (!all(res)) {
+    # The copy failed; we should clean up after ourselves and return an error
+    unlink(to, recursive = TRUE)
+    stop("Could not copy all files from directory '", from, "' to directory '", to, "'.")
+  }
+  stats::setNames(res, files.relative)
+
+}

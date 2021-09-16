@@ -54,8 +54,7 @@ send_password_reset_email_module <- function(input, output, session, email) {
           app_uid = getOption("polished")$app_uid,
           is_invite_required = .global_sessions$is_invite_required
         ),
-        encode = "json",
-        config = list(http_version = 0)
+        encode = "json"
       )
 
       res_content <- jsonlite::fromJSON(
@@ -63,7 +62,7 @@ send_password_reset_email_module <- function(input, output, session, email) {
       )
 
       if (!identical(httr::status_code(res), 200L)) {
-        stop(res_content$message)
+        stop(res_content$error)
       }
 
       shinyFeedback::showToast(

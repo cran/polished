@@ -104,8 +104,7 @@ user_access_module <- function(input, output, session) {
         httr::authenticate(
           user = getOption("polished")$api_key,
           password = ""
-        ),
-        config = list(http_version = 0)
+        )
       )
 
       httr::stop_for_status(res)
@@ -114,21 +113,10 @@ user_access_module <- function(input, output, session) {
         httr::content(res, "text", encoding = "UTF-8")
       )
 
+      app_users <- tibble::as_tibble(app_users)
 
-      if (length(app_users) == 0) {
-        app_users <- tibble::tibble(
-          "uid" = character(0),
-          "app_uid" = character(0),
-          "user_uid" = character(0),
-          "is_admin" = logical(0),
-          "created_at" = as.POSIXct(character(0)),
-          "email" = character(0)
-        )
-      } else {
-        app_users <- app_users %>%
-          mutate(created_at = as.POSIXct(.data$created_at))
-      }
-
+      app_users <- app_users %>%
+        mutate(created_at = as.POSIXct(.data$created_at))
 
       res <- httr::GET(
         url = paste0(getOption("polished")$api_url, "/last-active-session-time"),
@@ -138,8 +126,7 @@ user_access_module <- function(input, output, session) {
         httr::authenticate(
           user = getOption("polished")$api_key,
           password = ""
-        ),
-        config = list(http_version = 0)
+        )
       )
 
       httr::stop_for_status(res)
@@ -148,13 +135,7 @@ user_access_module <- function(input, output, session) {
         httr::content(res, "text", encoding = "UTF-8")
       )
 
-
-      if (length(last_active_times) == 0) {
-        last_active_times <- tibble::tibble(
-          user_uid = character(0),
-          last_sign_in_at = character(0)
-        )
-      }
+      last_active_times <- tibble::as_tibble(last_active_times)
 
       last_active_times <- last_active_times %>%
         mutate(last_sign_in_at = lubridate::force_tz(lubridate::as_datetime((.data$last_sign_in_at)), tzone = "UTC"))
@@ -164,12 +145,13 @@ user_access_module <- function(input, output, session) {
 
     }, error = function(err) {
 
-      print("[polished] error")
+      msg <- "unable to get users from API"
+      print(paste0("[polished] error: ", msg))
       print(err)
 
       showToast(
         "error",
-        "Error retrieving app users from API",
+        msg,
         .options = polished_toast_options
       )
     })
@@ -381,8 +363,7 @@ user_access_module <- function(input, output, session) {
           user = getOption("polished")$api_key,
           password = ""
         ),
-        encode = "json",
-        config = list(http_version = 0)
+        encode = "json"
       )
 
       httr::stop_for_status(res)

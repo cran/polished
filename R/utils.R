@@ -143,8 +143,7 @@ is_email_registered <- function(email) {
     httr::authenticate(
       user = getOption("polished")$api_key,
       password = ""
-    ),
-    config = list(http_version = 0)
+    )
   )
 
   user_res_content <- jsonlite::fromJSON(
@@ -156,10 +155,10 @@ is_email_registered <- function(email) {
     stop("error checking user registration", .call = FALSE)
   }
 
-  if (isFALSE(user_res_content$email_verified) && isFALSE(user_res_content$email_verified)) {
-    out <- FALSE
-  } else {
+  if (isTRUE(user_res_content$is_password_set)) {
     out <- TRUE
+  } else {
+    out <- FALSE
   }
 
 

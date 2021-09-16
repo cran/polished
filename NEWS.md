@@ -1,4 +1,16 @@
 
+# polished v0.4.0
+
+* created API wrapper functions for programmatically managing users, apps, user invites,
+roles, etc.  See the new API Wrappers vignette for details (`vignette("api_wrappers", package = "polished")`).
+* added 93 new tests for the above mentioned new API wrapper functions.
+* removed `api_url` argument from `global_sessions_config()`.  This argument is only used
+internally during development, so there is no reason to expose it to package users.
+* Bug Fix: fixed check for user already registered during sign in process.
+* added `button_color` argument to `sign_in_ui_default()`.
+* added `tlmgr` argument to `deploy_app()` which allows support for generating pdf documents from 
+Rmarkdown.
+
 # polished v0.3.0
 
 * created new `deploy_app()` function for deploying apps to Polished Hosting.
@@ -6,11 +18,11 @@
 * `sign_out_from_shiny()` can now be used in the `session$onSessionEnded()` or `onStop()` to sign the user
 out when the user's session ends.
 * added support for package dependency detection (#129)
-* added cookie options { sameSite: "none", secure: true } when the app is being served over https.  This polished authentication to work in an iframe on most browsers.
+* added cookie options { sameSite: "none", secure: true } when the app is being served over https.  This allows polished authentication to work in an iframe on most browsers.
 * added email validation to email inputs in the sign in and registration modules. 
 * allow for a function UI be passed to the "ui" argument of `secure_ui()`.
 * added "redirect_page" argument to `sign_out_from_shiny()`
-* new "is_auth_required option" to `global_sessions_config()` which (when set to FALSE) allows users to access your app without being signed in.  By default this argument is set to TRUE. (#109)
+* new "is_auth_required" argument added to `global_sessions_config()` which (when set to FALSE) allows users to access your app without being signed in.  By default this argument is set to TRUE. (#109)
 * moved toast notification to top (better for mobile) and extended showDuration. (#107)
 
 # polished v0.2.0

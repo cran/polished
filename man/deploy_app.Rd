@@ -8,11 +8,11 @@ deploy_app(
   app_name,
   app_dir = ".",
   api_key = getOption("polished")$api_key,
-  api_url = "https://host-api.polished.tech",
   launch_browser = TRUE,
   region = "us-east1",
   ram_gb = 2,
-  r_ver = NULL
+  r_ver = NULL,
+  tlmgr = character(0)
 )
 }
 \arguments{
@@ -21,9 +21,6 @@ deploy_app(
 \item{app_dir}{The path to the directory containing your Shiny app.}
 
 \item{api_key}{Your polished.tech API key.  Defaults to \code{getOption("polished")$api_key}.}
-
-\item{api_url}{The Polished API url.  Defaults to "https://host-api.polished.tech".  You should
-not change from the default unless you are testing a development version of the API.}
 
 \item{launch_browser}{Whether or not to open your default browser to your newly deployed app
 after it is successfully deployed.  \code{TRUE} by default.}
@@ -41,6 +38,11 @@ will be supported.}
 supported by an r-ver Docker image.  You can see all the r-ver Docker image versions
 of R here \url{https://github.com/rocker-org/rocker-versioned2/tree/master/dockerfiles} and here
 \code{https://github.com/rocker-org/rocker-versioned/tree/master/r-ver}.}
+
+\item{tlmgr}{a character vector of TeX Live packages to install.  This is only used if your Shiny
+app generates pdf documents.  Defaults to \code{character(0)} for no TeX Live installation.  Set to
+\code{TRUE} for a minimal TeX Live installation, and pass a character vector of your TeX Live package
+dependencies to have all your TeX Live packages installed at build time.}
 }
 \description{
 Deploy a Shiny app to Polished Hosting

@@ -1,0 +1,3 @@
+default:
+  api_key: "ybb5sptUuidLW51arHrCmH3bDVoL1XXcGa"
+  auth_api_url: "https://auth-api-dev.polished.tech/v1"
