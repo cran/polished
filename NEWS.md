@@ -1,4 +1,17 @@
 
+# polished v0.5.0
+
+* Added 4 additional Polished Hosting regions (see documentation for `region` argument of `polished::deploy_app()`)
+* App names (i.e. `app_name`) can now include upper case letters & spaces (Example: `app_name = "Example App Name"`)
+* added "cache" argument to `deploy()` app to set whether or not to use a cached build of your Shiny
+app on Polished Hosting.
+* added "golem_package_name" argument to `deploy_app()` to allow for deploying Golem Shiny apps
+to Polished Hosting.
+* removed options to pass an "account module" and/or a "splash page module" to the `secure_ui()` and
+`secure_server()` functions.  These were experimental arguments for extending polished. We now have a better generalized solution for extending polished -- more to come soon.
+* export the `api_list_to_df` function
+* added new `cookie_expires` argument to `global_sessions_config()`, allowing you to set the cookie expiration for app users
+
 # polished v0.4.0
 
 * created API wrapper functions for programmatically managing users, apps, user invites,
