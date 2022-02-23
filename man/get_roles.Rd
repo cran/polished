@@ -4,7 +4,7 @@
 \alias{get_roles}
 \title{Polished API - Get Role(s)}
 \usage{
-get_roles(role_uid = NULL, api_key = getOption("polished")$api_key)
+get_roles(role_uid = NULL, api_key = get_api_key())
 }
 \arguments{
 \item{role_uid}{an optional role uid.}
@@ -13,12 +13,12 @@ get_roles(role_uid = NULL, api_key = getOption("polished")$api_key)
 so that you do not need to supply this argument with each function call.}
 }
 \value{
-an object of class \code{polished_api_res}.  The "content" of the object is a
-tibble of users(s) with the following columns:
+an object of class \code{polished_api_res}.  The \code{content} of the object is a
+tibble of user(s) with the following columns:
 \itemize{
-\item uid
-\item role_name
-\item created_at
+\item \code{uid}
+\item \code{role_name}
+\item \code{created_at}
 }
 }
 \description{

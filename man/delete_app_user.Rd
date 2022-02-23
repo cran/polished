@@ -4,7 +4,7 @@
 \alias{delete_app_user}
 \title{Polished API - Delete an App User}
 \usage{
-delete_app_user(app_uid, user_uid, api_key = getOption("polished")$api_key)
+delete_app_user(app_uid, user_uid, api_key = get_api_key())
 }
 \arguments{
 \item{app_uid}{an app uid.}
@@ -18,5 +18,5 @@ so that you do not need to supply this argument with each function call.}
 Polished API - Delete an App User
 }
 \seealso{
-\code{\link[=get_apps]{get_apps()}} \code{\link[=add_app]{add_app()}} \code{\link[=update_app]{update_app()}}
+\code{\link[=get_apps]{get_apps()}} \code{\link[=add_app]{add_app()}} \code{\link[=update_app_user]{update_app_user()}}
 }

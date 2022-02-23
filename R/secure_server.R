@@ -10,12 +10,16 @@
 #' @param custom_sign_in_server Either \code{NULL}, the default, or a Shiny module server containing your custom
 #' sign in server logic.
 #' @param allow_reconnect argument to pass to the Shiny \code{session$allowReconnect()} function. Defaults to
-#' \code{FALSE}.  Set to \code{TRUE} to allow reconnect with shiny-server and Rstudio Connect.  Set to \code{"force"}
+#' \code{FALSE}.  Set to \code{TRUE} to allow reconnect with shiny-server and RStudio Connect.  Set to \code{"force"}
 #' for local testing.  See \url{https://shiny.rstudio.com/articles/reconnecting.html} for more information.
+#' @param override_user whether or not to override the \code{session$user} with the polished
+#' \code{session$userData$user} user.  By default this is now set to \code{TRUE}, but if you are
+#' using a hosting option that uses the \code{session$user} (e.g. RStudio Connect), then you
+#' may want to set this to FALSE.  The polished user can always be found at \code{session$userData$user()}.
 #'
 #' @export
 #'
-#' @importFrom shiny observeEvent getQueryString callModule
+#' @importFrom shiny observe observeEvent getQueryString updateQueryString callModule onStop reactiveVal req
 #' @importFrom digest digest
 #'
 #'
@@ -23,13 +27,25 @@ secure_server <- function(
   server,
   custom_sign_in_server = NULL,
   custom_admin_server = NULL,
-  allow_reconnect = FALSE
+  allow_reconnect = FALSE,
+  override_user = TRUE
 ) {
 
   server <- force(server)
 
+  if (!exists(".polished")) {
+    stop("`.polished` does not exists.  Configure it with `polished_config()`", call. = FALSE)
+  }
+
   function(input, output, session) {
-    session$userData$user <- reactiveVal(NULL)
+    session$userData$user <- shiny::reactiveVal(NULL)
+
+    if (isTRUE(override_user)) {
+      #session$user <- reactiveVal(NULL)
+      shiny::observe({
+        session$user <- session$userData$user()
+      }, priority = 1)
+    }
 
     if (isTRUE(allow_reconnect) || allow_reconnect == "force") {
       session$allowReconnect(allow_reconnect)
@@ -40,7 +56,7 @@ secure_server <- function(
     shiny::observeEvent(input$hashed_cookie, {
       hashed_cookie <- input$hashed_cookie
 
-      if (isTRUE(.global_sessions$get_admin_mode())) {
+      if (isTRUE(.polished$admin_mode)) {
         session$userData$user(list(
           session_uid = uuid::UUIDgenerate(),
           user_uid = "00000000-0000-0000-0000-000000000000",
@@ -52,7 +68,7 @@ secure_server <- function(
         ))
 
         shiny::updateQueryString(
-          queryString = paste0("?page=admin_panel"),
+          queryString = paste0("?page=admin"),
           session = session,
           mode = "push"
         )
@@ -66,7 +82,13 @@ secure_server <- function(
       page <- query_list$page
       global_user <- NULL
       try({
-        global_user <- .global_sessions$find(hashed_cookie, paste0("server-", page))
+        global_user_res <- get_sessions(
+          app_uid = .polished$app_uid,
+          hashed_cookie = hashed_cookie
+        )
+
+        global_user <- global_user_res$content
+
       }, silent = TRUE)
 
 
@@ -75,7 +97,7 @@ secure_server <- function(
 
         # if the user is not on the sign in page, redirect to sign in and reload
         if ((!identical(page, "sign_in")) &&
-            isTRUE(.global_sessions$is_auth_required)) {
+            isTRUE(.polished$is_auth_required)) {
 
           shiny::updateQueryString(
             queryString = paste0("?page=sign_in"),
@@ -85,7 +107,7 @@ secure_server <- function(
           session$reload()
         } else {
 
-        session$userData$user(NULL)
+          session$userData$user(NULL)
           return()
         }
 
@@ -103,15 +125,16 @@ secure_server <- function(
         }
 
         #if (isTRUE(global_user$email_verified)) {
-        if (is.na(global_user$signed_in_as) || !is.null(query_list$page)) {
+        if (is.na(global_user$signed_in_as) || identical(query_list$page, "admin")) {
 
           # user is not on the custom Shiny app, so clear the signed in as user
           if (!is.na(global_user$signed_in_as)) {
-            # clear signed in as in .global_sessions
-            .global_sessions$set_signed_in_as(
-              global_user$session_uid,
-              NA,
-              user_uid = global_user$user_uid
+            # clear signed in as in .polished
+            update_session(
+              session_uid = global_user$session_uid,
+              session_data = list(
+                signed_in_as = NA
+              )
             )
           }
 
@@ -123,7 +146,7 @@ secure_server <- function(
 
         } else {
 
-          signed_in_as_user <- .global_sessions$get_signed_in_as_user(global_user$signed_in_as)
+          signed_in_as_user <- get_signed_in_as_user(global_user$signed_in_as)
           signed_in_as_user$session_uid <- global_user$session_uid
           signed_in_as_user$hashed_cookie <- global_user$hashed_cookie
 
@@ -146,12 +169,12 @@ secure_server <- function(
       hold_user <- session$userData$user()
 
       if (isTRUE(hold_user$email_verified) ||
-          isFALSE(.global_sessions$is_email_verification_required)) {
+          isFALSE(.polished$is_email_verification_required)) {
 
 
         is_on_admin_page <- if (
-          isTRUE(.global_sessions$get_admin_mode()) ||
-          identical(query_list$page, 'admin_panel')) TRUE else FALSE
+          isTRUE(.polished$admin_mode) ||
+          identical(query_list$page, 'admin')) TRUE else FALSE
 
 
         if (isTRUE(hold_user$is_admin) && isTRUE(is_on_admin_page)) {
@@ -169,7 +192,7 @@ secure_server <- function(
               custom_admin_server("custom_admin")
             } else {
               # old-style Shiny module
-              callModule(
+              shiny::callModule(
                 custom_admin_server,
                 "custom_admin"
               )
@@ -177,10 +200,10 @@ secure_server <- function(
 
 
           }
-        } else if (is.null(query_list$page)) {
+        } else {
 
           # go to the custom app
-          if (isTRUE(.global_sessions$is_auth_required)) {
+          if (isTRUE(.polished$is_auth_required)) {
             server(input, output, session)
           }
 
@@ -200,9 +223,11 @@ secure_server <- function(
 
             tryCatch({
 
-              .global_sessions$set_inactive(
+              update_session(
                 session_uid = hold_user$session_uid,
-                user_uid = hold_user$user_uid
+                session_data = list(
+                  is_active = FALSE
+                )
               )
 
             }, catch = function(err) {
@@ -220,7 +245,7 @@ secure_server <- function(
         # go to email verification view.
         # `secure_ui()` will go to email verification view if isTRUE(is_authed) && isFALSE(email_verified)
 
-        callModule(
+        shiny::callModule(
           verify_email_module,
           "verify"
         )
@@ -229,14 +254,14 @@ secure_server <- function(
     }, once = TRUE)
 
 
-    if (isFALSE(.global_sessions$is_auth_required)) {
+    if (isFALSE(.polished$is_auth_required)) {
       server(input, output, session)
     }
 
     # load up the sign in module server logic if the user in on "sign_in" page
 
-    observeEvent(session$userData$user(), {
-      req(is.null(session$userData$user()))
+    shiny::observeEvent(session$userData$user(), {
+      shiny::req(is.null(session$userData$user()))
 
       query_list <- shiny::getQueryString()
       page <- query_list$page

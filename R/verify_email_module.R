@@ -11,7 +11,7 @@
 verify_email_module_ui <- function(id) {
   ns <- NS(id)
 
-  firebase_config <- .global_sessions$firebase_config
+  firebase_config <- .polished$firebase_config
 
   fluidPage(
     tags$head(
@@ -86,25 +86,16 @@ verify_email_module <- function(input, output, session) {
       if (count_polls < 100) {
         tryCatch({
 
-          res <- httr::GET(
-            url = paste0(getOption("polished")$api_url, "/users"),
-            httr::authenticate(
-              user = getOption("polished")$api_key,
-              password = ""
-            ),
-            query = list(
-              user_uid = session$userData$user()$user_uid
-            )
+          user_res <- get_users(
+            user_uid = session$userData$user()$user_uid
           )
 
-          res_content <- jsonlite::fromJSON(
-            httr::content(res, type = "text", encoding = "UTF-8")
-          )
+          user <- user_res$content
 
-          if (identical(httr::status_code(res), 200L)) {
-            return(res_content)
+          if (identical(httr::status_code(user_res), 200L)) {
+            return(user)
           } else {
-            stop(res_content, call. = FALSE)
+            stop(user, call. = FALSE)
           }
         }, error = function(err) {
 
@@ -134,15 +125,15 @@ verify_email_module <- function(input, output, session) {
 
 
       res <- httr::POST(
-        url = paste0(getOption("polished")$api_url, "/resend-verification-email"),
+        url = paste0(.polished$api_url, "/resend-verification-email"),
         httr::authenticate(
-          user = getOption("polished")$api_key,
+          user = get_api_key(),
           password = ""
         ),
         body = list(
           email = hold_email,
           user_uid = session$userData$user()$user_uid,
-          app_uid = getOption("polished")$app_uid
+          app_uid = .polished$app_uid
         ),
         encode = "json"
       )

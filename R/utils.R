@@ -53,13 +53,12 @@ get_cookie <- function(cookie_string, name) {
 }
 
 
-#' @noRd
-#'
-#' @importFrom lubridate with_tz
-time_now_utc <- function() {
-  lubridate::with_tz(Sys.time(), tzone = "UTC")
-}
 
+#' create UI for checkbox to send an email invite
+#'
+#' @param ns the Shiny namespace function
+#' @param app_url the app url
+#'
 #' @noRd
 #'
 #' @importFrom shinyjs disabled
@@ -100,9 +99,8 @@ send_invite_checkbox <- function(ns, app_url) {
   email_invite_checkbox
 }
 
-#' @noRd
-#'
-#' Default `.options` for `showToast`
+
+# Default `.options` for `showToast`
 polished_toast_options <- list(
   positionClass = "toast-top-center",
   showDuration = 1000,
@@ -112,6 +110,8 @@ polished_toast_options <- list(
 #' is_valid_email
 #'
 #' function for email validation (Sign in & Registration)
+#'
+#' @param x email address to check
 #'
 #' @noRd
 #'
@@ -136,12 +136,12 @@ is_valid_email <- function(x) {
 is_email_registered <- function(email) {
 
   user_res <- httr::GET(
-    paste0(getOption("polished")$api_url, "/users"),
+    paste0(.polished$api_url, "/users"),
     query = list(
       email = email
     ),
     httr::authenticate(
-      user = getOption("polished")$api_key,
+      user = get_api_key(),
       password = ""
     )
   )

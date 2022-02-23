@@ -12,13 +12,13 @@
 #' and the \code{app_name} will be ignored.  If the app does not exists, a zero row tibble
 #' will be returned.
 #'
-#' @return an object of class \code{polished_api_res}.  The "content" of the object is a
+#' @return an object of class \code{polished_api_res}.  The `content` of the object is a
 #' tibble of app(s) with the following columns:
-#' - uid
-#' - app_name
-#' - app_url
-#' - created_at
-#' - modified_at
+#' - `uid`
+#' - `app_name`
+#' - `app_url`
+#' - `created_at`
+#' - `modified_at`
 #'
 #' @export
 #'
@@ -29,7 +29,7 @@
 get_apps <- function(
   app_uid = NULL,
   app_name = NULL,
-  api_key = getOption("polished")$api_key
+  api_key = get_api_key()
 ) {
 
   query_out <- list()
@@ -37,7 +37,7 @@ get_apps <- function(
   query_out$app_name <- app_name
 
   resp <- httr::GET(
-    url = paste0(getOption("polished")$api_url, "/apps"),
+    url = paste0(.polished$api_url, "/apps"),
     ua,
     httr::authenticate(
       user = api_key,
@@ -68,7 +68,7 @@ get_apps <- function(
 #'
 #' @importFrom httr POST authenticate
 #'
-add_app <- function(app_name, app_url = NULL, api_key = getOption("polished")$api_key) {
+add_app <- function(app_name, app_url = NULL, api_key = get_api_key()) {
 
   body_out <- list(
     app_name = app_name
@@ -77,7 +77,7 @@ add_app <- function(app_name, app_url = NULL, api_key = getOption("polished")$ap
   body_out$app_url <- app_url
 
   resp <- httr::POST(
-    url = paste0(getOption("polished")$api_url, "/apps"),
+    url = paste0(.polished$api_url, "/apps"),
     ua,
     httr::authenticate(
       user = api_key,
@@ -107,7 +107,8 @@ add_app <- function(app_name, app_url = NULL, api_key = getOption("polished")$ap
 #'
 #' @importFrom httr PUT authenticate
 #'
-update_app <- function(app_uid, app_name = NULL, app_url = NULL, api_key = getOption("polished")$api_key) {
+update_app <- function(app_uid, app_name = NULL, app_url = NULL,
+                       api_key = get_api_key()) {
 
   body_out <- list(
     app_uid = app_uid
@@ -121,7 +122,7 @@ update_app <- function(app_uid, app_name = NULL, app_url = NULL, api_key = getOp
   }
 
   resp <- httr::PUT(
-    url = paste0(getOption("polished")$api_url, "/apps"),
+    url = paste0(.polished$api_url, "/apps"),
     ua,
     httr::authenticate(
       user = api_key,
@@ -137,9 +138,16 @@ update_app <- function(app_uid, app_name = NULL, app_url = NULL, api_key = getOp
 
 #' Polished API - Delete an App
 #'
-#' @param app_uid the app uid.
+#' @param app_uid an optional app uid.  One of either \code{app_uid} or
+#' \code{app_name} must be provided.
+#' @param app_name an optional app name.  One of either \code{app_uid} or
+#' \code{app_name} must be provided.
+#'
 #'
 #' @inheritParams get_apps
+#'
+#' @details If both \code{app_uid} and \code{app_name} arguments are provided, then
+#' the \code{app_uid} will be used and the \code{app_name} will be ignored.
 #'
 #' @export
 #'
@@ -147,14 +155,31 @@ update_app <- function(app_uid, app_name = NULL, app_url = NULL, api_key = getOp
 #'
 #' @importFrom httr DELETE authenticate
 #'
-delete_app <- function(app_uid, api_key = getOption("polished")$api_key) {
+delete_app <- function(
+  app_uid = NULL,
+  app_name = NULL,
+  api_key = get_api_key()
+) {
 
+  if (is.null(app_uid) && is.null(app_name)) {
+    stop("`app_uid` and `app_name` cannot both be `NULL`", call. = FALSE)
+  }
+
+  if (missing(app_uid) && !is.null(app_name)) {
+    df <- get_apps(app_name = app_name, api_key = api_key)
+    app_uid <- df$uid[df$app_name %in% app_name]
+    if (length(app_uid) > 1) {
+      stop("`delete_app` requires app_uid, cannot infer from app listing",
+           .call = FALSE)
+    }
+    if (length(app_uid) == 0) app_uid <- NULL
+  }
   query_out <- list(
     app_uid = app_uid
   )
 
   resp <- httr::DELETE(
-    url = paste0(getOption("polished")$api_url, "/apps"),
+    url = paste0(.polished$api_url, "/apps"),
     ua,
     httr::authenticate(
       user = api_key,

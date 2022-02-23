@@ -4,11 +4,11 @@
 #'
 #' @inheritParams get_apps
 #'
-#' @return an object of class \code{polished_api_res}.  The "content" of the object is a
-#' tibble of users(s) with the following columns:
-#' - uid
-#' - role_name
-#' - created_at
+#' @return an object of class \code{polished_api_res}.  The `content` of the object is a
+#' tibble of user(s) with the following columns:
+#' - `uid`
+#' - `role_name`
+#' - `created_at`
 #'
 #' @export
 #'
@@ -18,14 +18,14 @@
 #'
 get_roles <- function(
   role_uid = NULL,
-  api_key = getOption("polished")$api_key
+  api_key = get_api_key()
 ) {
 
   query_out <- list()
   query_out$role_uid <- role_uid
 
   resp <- httr::GET(
-    url = paste0(getOption("polished")$api_url, "/roles"),
+    url = paste0(.polished$api_url, "/roles"),
     ua,
     httr::authenticate(
       user = api_key,
@@ -52,16 +52,16 @@ get_roles <- function(
 #'
 #' @seealso [get_roles()] [delete_role()]
 #'
-#' @importFrom httr GET authenticate
+#' @importFrom httr POST authenticate
 #'
-add_role <- function(role_name, api_key = getOption("polished")$api_key) {
+add_role <- function(role_name, api_key = get_api_key()) {
 
   body_out <- list(
     role_name = role_name
   )
 
   resp <- httr::POST(
-    url = paste0(getOption("polished")$api_url, "/roles"),
+    url = paste0(.polished$api_url, "/roles"),
     ua,
     httr::authenticate(
       user = api_key,
@@ -89,14 +89,14 @@ add_role <- function(role_name, api_key = getOption("polished")$api_key) {
 #'
 #' @importFrom httr DELETE authenticate
 #'
-delete_role <- function(role_uid, api_key = getOption("polished")$api_key) {
+delete_role <- function(role_uid, api_key = get_api_key()) {
 
   query_out <- list(
     role_uid = role_uid
   )
 
   resp <- httr::DELETE(
-    url = paste0(getOption("polished")$api_url, "/roles"),
+    url = paste0(.polished$api_url, "/roles"),
     ua,
     httr::authenticate(
       user = api_key,

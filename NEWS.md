@@ -1,15 +1,31 @@
+# polished v0.6.0
+
+* major internal refactor to simplify how user sessions are handled.  We remove the reliance
+on R6. We now just use a regular base R environment to to hold the configuration and regular R functions (rather than R6 methods) to handle user sessions.  You can now access all `polished` auth configuration from your Shiny app
+or other R packages that build on `polished` with via the `polished::.polished` environment. 
+* new argument "override_user" added to `secure_server()`. When this argument is set
+to `TRUE` (the default), the `session$userData$user()` polished user will be accessible in
+the `session$user`.  Set this argument to `FALSE` if you are using RStudio Connect or another hosting option that uses the `session$user` and you need access to the value they set for `session$user`. 
+* fix to allow for multiple custom tabItems on the admin panel 
+* The admin panel query string has been changed from ?page=admin_panel to ?page=admin
+* new `get_api_key()` function that will check for the environment variable "POLISHED_API_KEY"
+if the api key is not found in the polished options.
+* new `polished_config()` function to replace `global_sessions_config()` which has been 
+deprecated.
+* Bug Fix (#172) - browser previously refreshed when url query or hash parameters changed, but user remained on the Shiny app.  This has been updated to be consistent with normal Shiny behavior (i.e. shiny session does not reload when url query or hash parameters update).
+* Added `secure_rmd()`, which can be used to render and secure any R Markdown (`.Rmd`) document. Rendering is handled by `rmarkdown::render` and the then the rendered document is secured with `polished` authentication.
 
 # polished v0.5.0
 
-* Added 4 additional Polished Hosting regions (see documentation for `region` argument of `polished::deploy_app()`)
+* Added 4 additional [Polished Hosting](https://polished.tech/docs/04-hosting-deploy-app) regions (see documentation for `region` argument of `polished::deploy_app()`)
 * App names (i.e. `app_name`) can now include upper case letters & spaces (Example: `app_name = "Example App Name"`)
-* added "cache" argument to `deploy()` app to set whether or not to use a cached build of your Shiny
+* added `cache` argument to `deploy_app()` to set whether or not to use a cached build of your Shiny
 app on Polished Hosting.
-* added "golem_package_name" argument to `deploy_app()` to allow for deploying Golem Shiny apps
+* added `golem_package_name` argument to `deploy_app()` to allow for deploying Golem Shiny apps
 to Polished Hosting.
 * removed options to pass an "account module" and/or a "splash page module" to the `secure_ui()` and
 `secure_server()` functions.  These were experimental arguments for extending polished. We now have a better generalized solution for extending polished -- more to come soon.
-* export the `api_list_to_df` function
+* export the `api_list_to_df()` function
 * added new `cookie_expires` argument to `global_sessions_config()`, allowing you to set the cookie expiration for app users
 
 # polished v0.4.0

@@ -6,14 +6,17 @@
 #'
 #' @inheritParams get_apps
 #'
-#' @return an object of class \code{polished_api_res}.  The "content" of the object is a
+#' @details If \code{app_uid}, \code{user_uid}, & \code{email} are all \code{NULL},
+#' then all app users will be returned.
+#'
+#' @return an object of class \code{polished_api_res}.  The `content` of the object is a
 #' tibble of app(s) with the following columns:
-#' - uid
-#' - app_uid
-#' - user_uid
-#' - is_admin
-#' - created_at
-#' - email
+#' - `uid`
+#' - `app_uid`
+#' - `user_uid`
+#' - `is_admin`
+#' - `created_at`
+#' - `email`
 #'
 #' @export
 #'
@@ -25,7 +28,7 @@ get_app_users <- function(
   app_uid = NULL,
   user_uid = NULL,
   email = NULL,
-  api_key = getOption("polished")$api_key
+  api_key = get_api_key()
 ) {
 
   query_out <- list()
@@ -36,7 +39,7 @@ get_app_users <- function(
 
 
   resp <- httr::GET(
-    url = paste0(getOption("polished")$api_url, "/app-users"),
+    url = paste0(.polished$api_url, "/app-users"),
     ua,
     httr::authenticate(
       user = api_key,
@@ -58,7 +61,7 @@ get_app_users <- function(
 #' @param app_uid the app uid.
 #' @param user_uid an optional user uid for the user to be invited to the app.
 #' @param email an optional user email address.
-#' @param is_admin boolean - whether or not the user is a Polished admin.
+#' @param is_admin boolean (default: \code{FALSE}) - whether or not the user is a Polished admin.
 #' @param send_invite_email boolean - whether or not to send the user an invite email
 #' notifying them they have been invited to access the app.
 #' @param email an optional email address for the user to be invited to the app.
@@ -80,7 +83,7 @@ add_app_user <- function(
   email = NULL,
   is_admin = FALSE,
   send_invite_email = FALSE,
-  api_key = getOption("polished")$api_key
+  api_key = get_api_key()
 ){
 
   if (is.null(user_uid) && is.null(email)) {
@@ -106,7 +109,7 @@ add_app_user <- function(
 
 
   resp <- httr::POST(
-    url = paste0(getOption("polished")$api_url, "/app-users"),
+    url = paste0(.polished$api_url, "/app-users"),
     ua,
     httr::authenticate(
       user = api_key,
@@ -126,7 +129,7 @@ add_app_user <- function(
 #'
 #' @param app_uid the app uid to update.
 #' @param user_uid the user uid to update.
-#' @param is_admin boolean - whether or not the user is an admin.
+#' @param is_admin boolean (default: \code{FALSE}) - whether or not the user is an admin.
 #'
 #' @inheritParams get_apps
 #'
@@ -140,8 +143,8 @@ add_app_user <- function(
 update_app_user <- function(
   app_uid,
   user_uid,
-  is_admin,
-  api_key = getOption("polished")$api_key
+  is_admin = FALSE,
+  api_key = get_api_key()
 ) {
 
   body_out <- list(
@@ -151,7 +154,7 @@ update_app_user <- function(
   )
 
   resp <- httr::PUT(
-    url = paste0(getOption("polished")$api_url, "/app-users"),
+    url = paste0(.polished$api_url, "/app-users"),
     ua,
     httr::authenticate(
       user = api_key,
@@ -174,11 +177,11 @@ update_app_user <- function(
 #'
 #' @export
 #'
-#' @seealso [get_apps()] [add_app()] [update_app()]
+#' @seealso [get_apps()] [add_app()] [update_app_user()]
 #'
 #' @importFrom httr DELETE authenticate
 #'
-delete_app_user <- function(app_uid, user_uid, api_key = getOption("polished")$api_key) {
+delete_app_user <- function(app_uid, user_uid, api_key = get_api_key()) {
 
   query_out <- list(
     app_uid = app_uid,
@@ -186,7 +189,7 @@ delete_app_user <- function(app_uid, user_uid, api_key = getOption("polished")$a
   )
 
   resp <- httr::DELETE(
-    url = paste0(getOption("polished")$api_url, "/app-users"),
+    url = paste0(.polished$api_url, "/app-users"),
     ua,
     httr::authenticate(
       user = api_key,

@@ -22,7 +22,7 @@
 get_user_roles <- function(
   user_uid = NULL,
   role_uid = NULL,
-  api_key = getOption("polished")$api_key
+  api_key = get_api_key()
 ) {
 
   query_out <- list()
@@ -30,7 +30,7 @@ get_user_roles <- function(
   query_out$role_uid <- role_uid
 
   resp <- httr::GET(
-    url = paste0(getOption("polished")$api_url, "/user-roles"),
+    url = paste0(.polished$api_url, "/user-roles"),
     ua,
     httr::authenticate(
       user = api_key,
@@ -60,7 +60,7 @@ get_user_roles <- function(
 #'
 #' @importFrom httr POST authenticate
 #'
-add_user_role <- function(user_uid, role_uid, api_key = getOption("polished")$api_key) {
+add_user_role <- function(user_uid, role_uid, api_key = get_api_key()) {
 
   body_out <- list(
     user_uid = user_uid,
@@ -68,7 +68,7 @@ add_user_role <- function(user_uid, role_uid, api_key = getOption("polished")$ap
   )
 
   resp <- httr::POST(
-    url = paste0(getOption("polished")$api_url, "/user-roles"),
+    url = paste0(.polished$api_url, "/user-roles"),
     ua,
     httr::authenticate(
       user = api_key,
@@ -97,7 +97,7 @@ add_user_role <- function(user_uid, role_uid, api_key = getOption("polished")$ap
 #'
 #' @importFrom httr DELETE authenticate
 #'
-delete_user_role <- function(role_uid, user_uid, api_key = getOption("polished")$api_key) {
+delete_user_role <- function(role_uid, user_uid, api_key = get_api_key()) {
 
   query_out <- list(
     role_uid = role_uid,
@@ -105,7 +105,7 @@ delete_user_role <- function(role_uid, user_uid, api_key = getOption("polished")
   )
 
   resp <- httr::DELETE(
-    url = paste0(getOption("polished")$api_url, "/user-roles"),
+    url = paste0(.polished$api_url, "/user-roles"),
     ua,
     httr::authenticate(
       user = api_key,

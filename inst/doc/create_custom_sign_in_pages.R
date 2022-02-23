@@ -115,7 +115,7 @@ knitr::opts_chunk$set(
 #    ui,
 #    server,
 #    onStart = function() {
-#      global_sessions_config(
+#      polished_config(
 #        api_key = "<your polished.tech API key>",
 #        app_name = "<your app name from polished.tech>"
 #      )
