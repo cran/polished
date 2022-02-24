@@ -1,7 +1,7 @@
-1149b887f343304b2f6bc6d02e6c9e84 *DESCRIPTION
+146b7fe032c50f2ddabd55b790213ce0 *DESCRIPTION
 aefe93347a234fac9828e795c20fd1aa *LICENSE
 6a1c606180159063eba465b791e6495c *NAMESPACE
-5ce67f6c364ff74ca2aaff0847900e53 *NEWS.md
+94d580b91415457b96d7209b839848e9 *NEWS.md
 536c2e4651f55a1d713874dfe74bb9f7 *R/admin_button.R
 e9ea3d324f013e375a1b8a234880acd8 *R/admin_module.R
 a3a8faeb902f93b22bd68524598825f0 *R/api_00.R
@@ -22,7 +22,7 @@ b378267af8215fa443d086e55f09f8a3 *R/firebase_init.R
 3f1410ae8d352557b6a6ccf1c4a1e414 *R/onLoad.R
 a1d1e90892aed1ab7a15cb9c3b1a8267 *R/package_deps.R
 f1270e78dff0964e8fd73a79a049092e *R/password_input.R
-977e15befbdfe0ac214070734e7d522d *R/polished_config.R
+995c98b8a748a373cec0d813c42a9313 *R/polished_config.R
 9913ceb2f63405d1dbc0405368449f9f *R/profile_module.R
 900dae1d8af76c07d483aa8e20e4219c *R/providers_ui.R
 07a2ee71bfcd7cc3bb5ebaef5d523c98 *R/secure_rmd.R

@@ -2,7 +2,7 @@ Package: polished
 Type: Package
 Title: Authentication, User Administration, and Hosting for 'shiny'
         Apps
-Version: 0.6.0
+Version: 0.6.1
 Authors@R: c(
   person("Andy", "Merlino", email = "andy.merlino@tychobra.com", role = c("aut", "cre")),
   person("Patrick", "Howard", email = "patrick.howard@tychobra.com", role = c("aut")),
@@ -24,9 +24,9 @@ VignetteBuilder: knitr
 RoxygenNote: 7.1.2
 Config/testthat/edition: 3
 NeedsCompilation: no
-Packaged: 2022-02-23 11:41:56 UTC; andy
+Packaged: 2022-02-23 20:01:34 UTC; andy
 Author: Andy Merlino [aut, cre],
   Patrick Howard [aut],
   Jimmy Briggs [aut]
 Repository: CRAN
-Date/Publication: 2022-02-23 12:10:02 UTC
+Date/Publication: 2022-02-24 11:50:06 UTC
