@@ -1,14 +1,16 @@
-#' admin_user_access_ui
+#' admin user access_ui
+#'
+#' Shiny module UI for the default user access tab in the \code{polished} Admin Panel.
 #'
 #' @param id the module id
 #'
-#' @importFrom shiny fluidRow column actionButton
+#' @importFrom shiny NS fluidRow column actionButton icon
 #' @importFrom shinydashboard tabItem box
 #' @importFrom shinycssloaders withSpinner
 #' @importFrom htmltools br tags
 #' @importFrom DT DTOutput
 #'
-#' @noRd
+#' @export
 #'
 user_access_module_ui <- function(id) {
   ns <- shiny::NS(id)
@@ -37,7 +39,7 @@ user_access_module_ui <- function(id) {
               class = "btn-success",
               #style = "color: #fff; position: absolute: top: 20, left: 15; margin-bottom: 0;",
               style = "color: #fff;",
-              icon = icon("user-plus")
+              icon = shiny::icon("user-plus")
             )
           )
         ),
@@ -65,7 +67,10 @@ user_access_module_ui <- function(id) {
   )
 }
 
-#' admin_user_access
+#' admin user access module
+#'
+#' Server function for the default Shiny module to control user access in the \code{polished}
+#' Admin Panel.
 #'
 #' @param input the Shiny server input
 #' @param output the Shiny server output
@@ -75,13 +80,15 @@ user_access_module_ui <- function(id) {
 #' @importFrom htmltools tags
 #' @importFrom DT renderDT datatable dataTableProxy formatDate replaceData JS
 #' @importFrom dplyr filter select %>% left_join mutate
-#' @importFrom tibble tibble
+#' @importFrom tibble tibble as_tibble
 #' @importFrom shinyFeedback showToast
 #' @importFrom purrr map_chr
 #' @importFrom lubridate force_tz as_datetime
 #' @importFrom rlang .data
+#' @importFrom httr GET authenticate stop_for_status content
+#' @importFrom jsonlite fromJSON
 #'
-#' @noRd
+#' @export
 #'
 user_access_module <- function(input, output, session) {
   ns <- session$ns
@@ -159,13 +166,7 @@ user_access_module <- function(input, output, session) {
 
         the_row <- out[row_num, ]
 
-        if (.polished$admin_mode) {
-          buttons_out <- paste0('<div class="btn-group" style="width: 105px" role="group" aria-label="User Action Buttons">
-            <button class="btn btn-default btn-sm sign_in_as_btn" data-toggle="tooltip" data-placement="top" title="Sign In As" id = ', the_row$user_uid, ' style="margin: 0" disabled><i class="fas fa-user-astronaut"></i></button>
-            <button class="btn btn-primary btn-sm edit_btn" data-toggle="tooltip" data-placement="top" title="Edit User" id = ', the_row$user_uid, ' style="margin: 0"><i class="fa fa-pencil-square-o"></i></button>
-            <button class="btn btn-danger btn-sm delete_btn" id = ', the_row$user_uid, ' style="margin: 0" disabled><i class="fa fa-trash-o"></i></button>
-          </div>')
-        } else if (isTRUE(the_row$is_admin)) {
+        if (isTRUE(the_row$is_admin)) {
           buttons_out <- paste0('<div class="btn-group" style="width: 105px" role="group" aria-label="User Action Buttons">
             <button class="btn btn-default btn-sm sign_in_as_btn" data-toggle="tooltip" data-placement="top" title="Sign In As" id = ', the_row$user_uid, ' style="margin: 0"><i class="fas fa-user-astronaut"></i></button>
             <button class="btn btn-primary btn-sm edit_btn" data-toggle="tooltip" data-placement="top" title="Edit User" id = ', the_row$user_uid, ' style="margin: 0"><i class="fa fa-pencil-square-o"></i></button>
@@ -373,7 +374,6 @@ user_access_module <- function(input, output, session) {
 
 
   shiny::observeEvent(input$sign_in_as_btn_user_uid, {
-    req(isFALSE(.polished$admin_mode))
     hold_user <- session$userData$user()
 
     user_to_sign_in_as <- users() %>%

@@ -42,7 +42,7 @@ valid_gcp_regions <- c(
 #' on Google Cloud Platform. Currently, database connections are only supported for
 #' `us-east1`. See \url{https://polished.tech/docs/06-database-connections} for details.
 #' @param ram_gb the amount of memory (in `GiB`) to allocate to your Shiny app's server.
-#' Valid values are `2`, `4`, or `8`.
+#' Valid values are `2`, `4`, `8`, `16`, or `32`.
 #' @param r_ver Character string of desired `R` version.  If kept as \code{NULL} (the default),
 #' \code{deploy_app()} will detect the R version you are currently running.  The R version must be a version
 #' supported by an `r-ver` Docker image.  You can see all the `r-ver` Docker image versions
@@ -90,6 +90,8 @@ deploy_app <- function(
     stop("You cannot run `polished::deploy_app()` from Polished Hosting.", call. = FALSE)
   }
 
+  max_sessions <- Inf
+
   if (!(region %in% valid_gcp_regions)) {
     stop(paste0(
       region,
@@ -98,8 +100,8 @@ deploy_app <- function(
     ))
   }
 
-  if (!(ram_gb %in% c(2, 4, 8))) {
-    stop("`ram_db` must be 2, 4, or 8", call. = FALSE)
+  if (!(ram_gb %in% c(2, 4, 8, 16, 32))) {
+    stop("`ram_gb` must be 2, 4, 8, 16, 32", call. = FALSE)
   }
 
   # check that app_dir contains either an "app.R" file or a "ui.R" and a "server.R" file
@@ -130,13 +132,19 @@ deploy_app <- function(
   if (isTRUE(launch_browser)) {
     cat("Your Shiny app will open in your default web browser once deployment is complete.\n")
   }
-  cat("Deployment status can be found at https://dashboard.polished.tech")
+
+  # Check if zipped app is larger than Cloud Run's max request size (32 Mb)
+  if (as.numeric(file.size(app_zip_path)) > 33554432) {
+    stop("Zipped application is too large (> 32 Mb)", call. = FALSE)
+  }
+
   zip_to_send <- httr::upload_file(
     path = app_zip_path,
     type = "application/x-gzip"
   )
 
 
+  cat("Deployment status can be found at https://dashboard.polished.tech\n")
 
   url_ <- paste0(.polished$host_api_url, "/hosted-apps")
   # reset the handle.  This allows us to redeploy the app after a failed deploy.  Without
@@ -160,10 +168,11 @@ deploy_app <- function(
       r_ver = r_ver,
       tlmgr = paste(tlmgr, collapse = ","),
       golem_package_name = golem_package_name,
-      cache = cache
+      cache = cache,
+      max_sessions = max_sessions
     ),
     encode = "multipart",
-    http_version = 0,
+    #http_version = 0,
     # timeout after 30 minutes
     timeout = 1800
   )

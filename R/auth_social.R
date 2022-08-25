@@ -38,7 +38,7 @@ refresh_jwt_pub_key <- function() {
   }
 }
 
-verify_firebase_token = function(firebase_token) {
+verify_firebase_token <- function(firebase_token) {
   # Google sends us 2 public keys to authenticate the JWT.  Sometimes the correct
   # key is the first one, and sometimes it is the second.  I do not know how
   # to tell which key is the right one to use, so we try them both for now.
@@ -74,6 +74,16 @@ verify_firebase_token = function(firebase_token) {
   decoded_jwt
 }
 
+is_uuid <- function(x) {
+  if (identical(length(x), 1L)) {
+    out <- isTRUE(grepl("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", x))
+  } else {
+    out <- FALSE
+  }
+
+  return(out)
+}
+
 #' verify the users Firebase JWT and store the session
 #'
 #' @param firebase_token the Firebase JWT.  This JWT is created client side
@@ -82,7 +92,6 @@ verify_firebase_token = function(firebase_token) {
 #' session.  This cookie is inserted into the "polished.sessions" table if the
 #' JWT is valid.
 #'
-#' @importFrom uuid UUIDgenerate
 #'
 #' @return NULL if sign in fails. If sign in is successful, a list containing the following:
 #' * email
@@ -94,7 +103,7 @@ verify_firebase_token = function(firebase_token) {
 #' @md
 #'
 #'
-sign_in_social = function(
+sign_in_social <- function(
   firebase_token,
   hashed_cookie
 ) {
@@ -110,41 +119,39 @@ sign_in_social = function(
 
   decoded_jwt <- verify_firebase_token(firebase_token)
 
-
   new_session <- NULL
-
+  new_session_uid <- NA
   if (!is.null(decoded_jwt)) {
 
-    new_session <- list(
-      email = decoded_jwt$email,
-      email_verified = decoded_jwt$email_verified
-    )
+    hold_session_email <- decoded_jwt$email
 
-
-
-
-    invite_res <- get_app_users(
+    invite <- get_app_users(
       app_uid = .polished$app_uid,
-      email = new_session$email,
-    )
-    invite <- invite_res$content
+      email = hold_session_email,
+    )$content
 
     if (isFALSE(.polished$is_invite_required) && identical(nrow(invite), 0L)) {
       # if invite is not required, and this is the first time that the user is signing in,
       # then create the App User in the `app_users` table
       add_app_user_res <- add_app_user(
         app_uid = .polished$app_uid,
-        email = new_session$email,
+        email = hold_session_email,
         is_admin = FALSE
       )
 
 
-      invite_res <- get_app_users(
+      invite <- get_app_users(
         app_uid = .polished$app_uid,
-        email = new_session$email
-      )
+        email = hold_session_email
+      )$content
 
-      invite <- invite_res$content
+      if (identical(nrow(invite), 0L)) {
+        stop("[polished] error checking user invite", call. = FALSE)
+      }
+
+      if (is_uuid(add_app_user_res$session_uid)) {
+        new_session_uid <- add_app_user_res$session_uid
+      }
 
     }
 
@@ -152,13 +159,13 @@ sign_in_social = function(
       stop("[polished] error checking user invite", call. = FALSE)
     }
 
+    new_session <- list(
+      is_admin = invite$is_admin,
+      user_uid = invite$user_uid,
+      hashed_cookie = hashed_cookie,
+      session_uid = new_session_uid
+    )
 
-    new_session$is_admin <- invite$is_admin
-    new_session$user_uid <- invite$user_uid
-
-
-    new_session$hashed_cookie <- hashed_cookie
-    new_session$session_uid <- uuid::UUIDgenerate()
     # add the session to the 'sessions' table
     add_session(
       app_uid = .polished$app_uid,

@@ -1,20 +1,21 @@
 #' the UI for a Shiny module to send a password reset email
 #'
 #' @param id the Shiny module \code{id}
+#' @param link_text text to use for the password reset link.
 #'
 #' @importFrom htmltools tagList
 #' @importFrom shiny actionLink NS
 #' @importFrom shinyFeedback useShinyFeedback
 #'
 #' @export
-send_password_reset_email_module_ui <- function(id) {
+send_password_reset_email_module_ui <- function(id, link_text = "Forgot your password?") {
   ns <- shiny::NS(id)
 
   tagList(
     shinyFeedback::useShinyFeedback(feedback = FALSE),
     shiny::actionLink(
       inputId = ns("reset_password"),
-      "Forgot your password?"
+      link_text
     )
   )
 }
@@ -44,6 +45,12 @@ send_password_reset_email_module <- function(input, output, session, email) {
     hold_email <- email()
 
     tryCatch({
+      # Stop if email is empty
+      if (identical(nchar(trimws(hold_email, which = "both")), 0L)) {
+        stop("Enter a valid email before clicking the Password Reset link.", call. = FALSE)
+      }
+
+
       res <- httr::POST(
         url = paste0(.polished$api_url, "/send-password-reset-email"),
         httr::authenticate(
@@ -63,7 +70,7 @@ send_password_reset_email_module <- function(input, output, session, email) {
       )
 
       if (!identical(httr::status_code(res), 200L)) {
-        stop(res_content$error)
+        stop(res_content$error, call. = FALSE)
       }
 
       shinyFeedback::showToast(
@@ -72,7 +79,6 @@ send_password_reset_email_module <- function(input, output, session, email) {
         .options = polished_toast_options
       )
     }, error = function(err) {
-
       print(err)
       shinyFeedback::showToast(
         "error",
@@ -80,7 +86,6 @@ send_password_reset_email_module <- function(input, output, session, email) {
         .options = polished_toast_options
       )
     })
-
 
   })
 

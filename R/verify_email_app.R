@@ -1,46 +1,56 @@
 #' Verify email page ui
 #'
-#' @param id the Shiny module id
 #'
 #' @importFrom htmltools tags h1
-#' @importFrom shiny fluidPage fluidRow column actionButton
+#' @importFrom shiny fluidPage fluidRow column actionButton actionLink
 #' @importFrom shinyFeedback useShinyFeedback
 #'
 #' @noRd
 #'
-verify_email_module_ui <- function(id) {
-  ns <- NS(id)
+verify_email_ui <- function() {
 
   firebase_config <- .polished$firebase_config
 
-  fluidPage(
+  shiny::fluidPage(
+    style = "background-color: #eee; height: 100vh;",
     tags$head(
       tags$link(rel = "shortcut icon", href = "polish/images/tychobra-icon-blue.png"),
       shinyFeedback::useShinyFeedback(feedback = FALSE, toastr = TRUE)
     ),
-    shinyFeedback::useShinyFeedback(),
     shiny::fluidRow(
       shiny::column(
         12,
-        br(),
-        shiny::actionButton(
-          ns("sign_out"),
-          label = "Sign Out",
-          icon("sign-out-alt"),
-          class = "pull-right"
-        )
-      )
-    ),
-    shiny::fluidRow(
-      shiny::column(
-        12,
-        class = "text-center",
-        style = "margin-top: 100px",
-        h1("Verification Email Sent"),
-        shiny::actionButton(
-          ns("resend_verification_email"),
-          label = "Resend Verification Email",
-          class = "btn-default"
+        div(
+          style = "
+            max-width: 630px;
+            width: 100%;
+            margin: 150px auto;
+            text-align: center;
+            background-color: #FFF;
+            border-radius: 8px;
+            padding-top: 30px;
+            padding-bottom: 35px;
+            box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+          ",
+          h1("Verification Email Sent"),
+          br(),
+          shiny::actionButton(
+            "resend_verification_email",
+            label = "Resend Verification Email",
+            class = "btn-default"
+          ),
+          br(),
+          br(),
+          div(
+            style = "
+              display: flex;
+              justify-content: center;
+            ",
+            shiny::actionLink(
+              "sign_out",
+              "Return to sign in page"
+            )
+          )
         )
       )
     )
@@ -61,7 +71,7 @@ verify_email_module_ui <- function(id) {
 #'
 #' @noRd
 #'
-verify_email_module <- function(input, output, session) {
+verify_email_server <- function(input, output, session) {
 
 
   ### check every 5 seconds if the user has verified their email address yet ---
@@ -92,15 +102,17 @@ verify_email_module <- function(input, output, session) {
 
           user <- user_res$content
 
-          if (identical(httr::status_code(user_res), 200L)) {
-            return(user)
-          } else {
-            stop(user, call. = FALSE)
-          }
+
+          return(user)
+
         }, error = function(err) {
 
+          msg <- "unable to check email verification status"
+          print(msg)
           print(err)
+          showToast("error", msg)
 
+          invisible(NULL)
         })
       }
 
@@ -147,7 +159,7 @@ verify_email_module <- function(input, output, session) {
 
       shinyFeedback::showToast(
         "success",
-        paste0("Verification email send to ", hold_email),
+        paste0("Verification email sent to ", hold_email),
         .options = polished_toast_options
       )
     }, error = function(err) {
@@ -167,8 +179,19 @@ verify_email_module <- function(input, output, session) {
 
   # sign out triggered from JS
   shiny::observeEvent(input$sign_out, {
-    sign_out_from_shiny(session)
-    session$reload()
+
+    tryCatch({
+      sign_out_from_shiny(session)
+      session$reload()
+    }, error = function(err) {
+      msg <- "unable to sign out"
+      print(msg)
+      print(err)
+      showToast("error", msg)
+
+      invisible(NULL)
+    })
+
   })
 
 }

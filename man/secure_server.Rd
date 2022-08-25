@@ -4,31 +4,16 @@
 \alias{secure_server}
 \title{Secure your Shiny app's server}
 \usage{
-secure_server(
-  server,
-  custom_sign_in_server = NULL,
-  custom_admin_server = NULL,
-  allow_reconnect = FALSE,
-  override_user = TRUE
-)
+secure_server(server, custom_sign_in_server = NULL, custom_admin_server = NULL)
 }
 \arguments{
 \item{server}{A Shiny server function (e.g \code{function(input, output, session) {}})}
 
-\item{custom_sign_in_server}{Either \code{NULL}, the default, or a Shiny module server containing your custom
+\item{custom_sign_in_server}{Either \code{NULL}, the default, or a Shiny server containing your custom
 sign in server logic.}
 
-\item{custom_admin_server}{Either \code{NULL}, the default, or a Shiny module server function containing your custom admin
+\item{custom_admin_server}{Either \code{NULL}, the default, or a Shiny server function containing your custom admin
 server functionality.}
-
-\item{allow_reconnect}{argument to pass to the Shiny \code{session$allowReconnect()} function. Defaults to
-\code{FALSE}.  Set to \code{TRUE} to allow reconnect with shiny-server and RStudio Connect.  Set to \code{"force"}
-for local testing.  See \url{https://shiny.rstudio.com/articles/reconnecting.html} for more information.}
-
-\item{override_user}{whether or not to override the \code{session$user} with the polished
-\code{session$userData$user} user.  By default this is now set to \code{TRUE}, but if you are
-using a hosting option that uses the \code{session$user} (e.g. RStudio Connect), then you
-may want to set this to FALSE.  The polished user can always be found at \code{session$userData$user()}.}
 }
 \description{
 This function is used to secure your Shiny app's server function.  Make sure to pass

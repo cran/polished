@@ -4,12 +4,19 @@
 \alias{get_users}
 \title{Polished API - Get User(s)}
 \usage{
-get_users(user_uid = NULL, email = NULL, api_key = get_api_key())
+get_users(
+  user_uid = NULL,
+  email = NULL,
+  include_two_fa = FALSE,
+  api_key = get_api_key()
+)
 }
 \arguments{
 \item{user_uid}{an optional user uid.}
 
 \item{email}{an optional user email.}
+
+\item{include_two_fa}{boolean, whether or not to include the 2FA information.}
 
 \item{api_key}{your Polished API key.  Set your polished api key using \code{\link{set_api_key}()}
 so that you do not need to supply this argument with each function call.}
@@ -40,5 +47,5 @@ and the \code{email} will be ignored.  If the user does not exists, a zero row t
 will be returned.
 }
 \seealso{
-\code{\link[=add_user]{add_user()}} \code{\link[=delete_user]{delete_user()}}
+\code{\link[=add_user]{add_user()}} \code{\link[=update_user]{update_user()}} \code{\link[=delete_user]{delete_user()}}
 }

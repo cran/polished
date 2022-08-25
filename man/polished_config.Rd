@@ -9,13 +9,12 @@ polished_config(
   app_name,
   api_key = get_api_key(),
   firebase_config = NULL,
-  admin_mode = FALSE,
   is_invite_required = TRUE,
   sign_in_providers = "email",
   is_email_verification_required = TRUE,
-  sentry_dsn = NULL,
   cookie_expires = 365L,
-  is_auth_required = TRUE
+  is_auth_required = TRUE,
+  is_two_fa_required = FALSE
 )
 
 global_sessions_config(...)
@@ -34,10 +33,6 @@ This list should have the following named elements:
 \item{\code{projectId}}
 }}
 
-\item{admin_mode}{\code{FALSE} by default.  Set to \code{TRUE} to enter the \code{polished} Admin Panel without needing
-to register and sign in.  This is useful during development for inviting the first users to your app.
-Make sure to set \code{admin_mode = FALSE} before deploying your app.}
-
 \item{is_invite_required}{\code{TRUE} by default.  Whether or not to require the user to have an
 invite before registering/signing in}
 
@@ -46,8 +41,6 @@ invite before registering/signing in}
 
 \item{is_email_verification_required}{\code{TRUE} by default.  Whether or not to require the user to
 verify their email before accessing your Shiny app.}
-
-\item{sentry_dsn}{either \code{NULL}, the default, or your Sentry project's DSN.}
 
 \item{cookie_expires}{the number of days before a user's cookie expires.
 Set to \code{NULL} to force Sign Out at session end. This argument is passed to
@@ -58,6 +51,9 @@ Default value is \code{365L} (i.e. 1 year)}
 in to access the app.  It can be useful to set this argument to \code{FALSE} if you want to
 allow users to do certain actions (such as viewing charts and tables) without signing in,
 and only require users to sign in if they want to save data to your database.}
+
+\item{is_two_fa_required}{boolean specifying whether or not 2 factor authentication is required.  Defaults
+to \code{FALSE}.}
 
 \item{...}{arguments to pass to \code{\link{polished_config}}}
 }

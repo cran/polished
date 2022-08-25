@@ -176,12 +176,10 @@ secure_rmd <- function(
     "app_name",
     "api_key",
     "firebase_config",
-    "admin_mode",
     "is_invite_required",
     "sign_in_providers",
     "is_email_verification_required",
     "is_auth_required",
-    "sentry_dsn",
     "cookie_expires"
   ))) {
     stop('Invalid value passed to "polished_config_args"', call. = FALSE)
