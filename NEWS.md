@@ -1,3 +1,15 @@
+# polished v0.8.0
+
+- new `add_auth_to_spec()` function to allow you to use the Plumber swagger docs with the new
+`auth_filter()` function.
+- `max_sessions` argument added to `deploy_app()` which enables the new Polished Hosting load balancer.
+- `gh_pat` argument added to `deploy_app()` which can be set to deploy/use private GitHub
+packages on Polished Hosting.
+- new function `auth_filter()` which makes it very simple to add Polished Auth to
+Plumber APIs.
+- more user friendly error messages for toast notifications.
+- added Hosting support for new "me-west1" region.
+
 # polished v0.7.0
 
 * removed `admin_mode` argument from `polished_config()`.

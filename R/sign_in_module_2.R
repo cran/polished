@@ -13,6 +13,8 @@
 #' @importFrom shinyFeedback useShinyFeedback loadingButton
 #' @importFrom shinyjs useShinyjs hidden disabled
 #'
+#' @return the sign in module UI.
+#'
 #' @export
 #'
 #'
@@ -225,6 +227,8 @@ sign_in_module_2_ui <- function(id) {
 #' @importFrom digest digest
 #' @importFrom shinyFeedback hideFeedback showFeedbackDanger resetLoadingButton
 #'
+#' @return \code{invisible(NULL)}
+#'
 #' @export
 #'
 sign_in_module_2 <- function(input, output, session) {
@@ -307,7 +311,12 @@ sign_in_module_2_ns <- function(input, output, session) {
         return()
       } else {
 
-        if (is_email_registered(email)) {
+        is_reg_list <- is_email_registered(email)
+        if (!is.null(is_reg_list$error)) {
+          stop(is_reg_list$error, call. = FALSE)
+        }
+
+        if (isTRUE(is_reg_list$is_registered)) {
 
           # user is invited, so continue the sign in process
           shinyjs::hide("submit_continue_sign_in")
@@ -358,12 +367,13 @@ sign_in_module_2_ns <- function(input, output, session) {
 
     }, error = function(err) {
       # user is not invited
-      print("Error in continuing sign in")
-      print(err)
+      warning("unable to continue sign in")
+      err_msg <- conditionMessage(err)
+      warning(err_msg)
       shinyWidgets::sendSweetAlert(
         session,
         title = "Error",
-        text = err$message,
+        text = err_msg,
         type = "error"
       )
 
@@ -420,16 +430,19 @@ sign_in_module_2_ns <- function(input, output, session) {
 
       shinyjs::runjs(paste0("$('#", ns('register_password'), "').focus()"))
 
-    }, error = function(e) {
+    }, error = function(err) {
       # user is not invited
-      print("Error in continuing registration")
-      print(e)
+      msg <- "Error checking invite"
+      warning(msg)
+      warning(conditionMessage(err))
       shinyWidgets::sendSweetAlert(
         session,
         title = "Error",
-        text = "Error checking invite",
+        text = msg,
         type = "error"
       )
+
+      invisible(NULL)
     })
 
   }, ignoreInit = TRUE)
@@ -468,7 +481,7 @@ sign_in_module_2_ns <- function(input, output, session) {
 
       shinyFeedback::resetLoadingButton('register_submit')
 
-      print(err)
+      warning(conditionMessage(err))
       shinyFeedback::showToast(
         "error",
         err$message,
@@ -501,5 +514,5 @@ sign_in_module_2_ns <- function(input, output, session) {
     })
   )
 
-  invisible()
+  invisible(NULL)
 }

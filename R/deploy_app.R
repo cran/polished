@@ -1,4 +1,10 @@
 
+#' Valid Regions for Polished Hosting
+#'
+#' Set the `region` argument of `deploy_app()` to one of these regions.
+#'
+#' @export
+#'
 valid_gcp_regions <- c(
   "asia-east1",
   "asia-east2",
@@ -11,12 +17,17 @@ valid_gcp_regions <- c(
   "asia-southeast2",
   "australia-southeast1",
   "australia-southeast2",
+  "europe-central2",
   "europe-north1",
+  "europe-southwest1",
   "europe-west1",
   "europe-west2",
   "europe-west3",
   "europe-west4",
   "europe-west6",
+  "europe-west8",
+  "europe-west9",
+  "me-west1",
   "northamerica-northeast1",
   "northamerica-northeast2",
   "southamerica-east1",
@@ -24,6 +35,8 @@ valid_gcp_regions <- c(
   "us-central1",
   "us-east1",
   "us-east4",
+  "us-east5",
+  "us-south1",
   "us-west1",
   "us-west2",
   "us-west3",
@@ -55,12 +68,19 @@ valid_gcp_regions <- c(
 #' `golem` package, provide the name of the Shiny app package as a character string.
 #' Defaults to \code{NULL}.  Keep as \code{NULL} for non `golem` Shiny apps.
 #' @param cache Boolean (default: \code{TRUE}) - whether or not to cache the Docker image.
+#' @param gh_pat optional GitHub PAT for installing packages from private GitHub repos.
+#' @param max_sessions the maximum number of concurrent sessions to run on a single app instance before
+#' starting another instance.  e.g. set to 5 to have a max of 5 user sessions per app instance.
+#' The default is \code{Inf} which will run all concurrent sessions on only 1 app instance.
+#'
 #'
 #' @importFrom utils browseURL
 #' @importFrom httr POST authenticate handle_reset status_code content upload_file
-#' @importFrom jsonlite fromJSON
+#' @importFrom jsonlite fromJSON write_json
 #'
 #' @export
+#'
+#' @return an object of class \code{polished_api_res}.
 #'
 #' @examples
 #'
@@ -83,14 +103,15 @@ deploy_app <- function(
   r_ver = NULL,
   tlmgr = character(0),
   golem_package_name = NULL,
-  cache = TRUE
+  cache = TRUE,
+  gh_pat = NULL,
+  max_sessions = Inf
 ) {
 
   if (identical(Sys.getenv("SHINY_HOSTING"), "polished")) {
     stop("You cannot run `polished::deploy_app()` from Polished Hosting.", call. = FALSE)
   }
 
-  max_sessions <- Inf
 
   if (!(region %in% valid_gcp_regions)) {
     stop(paste0(
@@ -123,9 +144,37 @@ deploy_app <- function(
 
 
   cat("Creating app bundle...")
-  app_zip_path <- bundle_app(
-    app_dir = app_dir
+
+  deps_list <- get_package_deps(app_dir, all_deps = FALSE)
+
+  # create yaml file with all the dependencies
+  deps_path <- file.path(app_dir, "deps.json")
+  jsonlite::write_json(
+    deps_list,
+    path = deps_path,
+    auto_unbox = TRUE,
+    pretty = TRUE
   )
+
+  params <- list(
+    app_name = app_name,
+    region = region,
+    ram_gb = ram_gb,
+    r_ver = r_ver,
+    tlmgr = tlmgr,
+    golem_package_name = golem_package_name,
+    cache = cache,
+    gh_pat = gh_pat,
+    max_sessions = max_sessions
+  )
+  jsonlite::write_json(
+    params,
+    path = file.path(app_dir, "params.json"),
+    auto_unbox = TRUE,
+    pretty = TRUE
+  )
+
+  app_zip_path <- bundle_app(app_dir = app_dir)
   cat(" Done\n")
 
   cat("Deploying App.  Hang tight.  This may take a while...\n")
@@ -161,16 +210,6 @@ deploy_app <- function(
     body = list(
       app_zip = zip_to_send
     ),
-    query = list(
-      app_name = app_name,
-      region = region,
-      ram_gb = ram_gb,
-      r_ver = r_ver,
-      tlmgr = paste(tlmgr, collapse = ","),
-      golem_package_name = golem_package_name,
-      cache = cache,
-      max_sessions = max_sessions
-    ),
     encode = "multipart",
     #http_version = 0,
     # timeout after 30 minutes
@@ -205,7 +244,8 @@ deploy_app <- function(
 #'
 #' @export
 #'
-#' @importFrom yaml write_yaml
+#' @return the file path of the app bundle
+#'
 #' @importFrom utils tar
 #' @importFrom uuid UUIDgenerate
 #'
@@ -221,13 +261,6 @@ deploy_app <- function(
 bundle_app <- function(
   app_dir = "."
 ) {
-
-
-  deps_list <- get_package_deps(app_dir)
-
-  # create yaml file with all the dependencies
-  yml_path <- file.path(app_dir, "deps.yaml")
-  yaml::write_yaml(deps_list, yml_path)
 
 
   tar_name <- "shiny_app.tar.gz"
@@ -333,7 +366,9 @@ dir_copy <- function(from, to, overwrite = TRUE, all.files = TRUE,
   if (!all(res)) {
     # The copy failed; we should clean up after ourselves and return an error
     unlink(to, recursive = TRUE)
-    stop("Could not copy all files from directory '", from, "' to directory '", to, "'.")
+    message("Could not copy these files from directory '", from, "' to directory '", to, "':")
+    message( paste( files.from[ res==FALSE ], collate="\n" ) )
+    stop( "Cannot continue." )
   }
   stats::setNames(res, files.relative)
 

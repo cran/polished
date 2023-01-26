@@ -8,6 +8,8 @@
 #' and the Sign out button in the user profile dropdown.  This is often used to
 #' add a user "My Account" page/app where the user can set their account settings.
 #'
+#' @return the UI to create the profile dropdown.
+#'
 #' @importFrom htmltools tags
 #' @importFrom shiny textOutput actionLink NS icon
 #'
@@ -54,6 +56,8 @@ profile_module_ui <- function(id, other_lis = NULL) {
 #' @param output the Shiny server \code{output}
 #' @param session the Shiny server \code{session}
 #'
+#' @return \code{invisible(NULL)}
+#'
 #' @export
 #'
 #' @importFrom shiny renderText observeEvent req
@@ -79,15 +83,21 @@ profile_module <- function(input, output, session) {
 
     }, error = function(err) {
 
-      print(err)
+      msg <- "Sign Out Error"
+      warning(msg)
+      warning(conditionMessage(err))
       shinyFeedback::showToast(
         "error",
-        "Sign Out Error",
+        msg,
         .options = polished_toast_options
       )
+
+      invisible(NULL)
     })
 
   })
+
+  invisible(NULL)
 }
 
 

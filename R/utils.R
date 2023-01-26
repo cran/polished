@@ -9,6 +9,8 @@
 #'
 #' @importFrom shiny updateQueryString getDefaultReactiveDomain
 #'
+#' @return \code{invisible(NULL)}
+#'
 #' @export
 #'
 #'
@@ -19,6 +21,8 @@ remove_query_string <- function(session = shiny::getDefaultReactiveDomain(), mod
     mode = mode,
     session = session
   )
+
+  invisible(NULL)
 }
 
 #' get_cookie
@@ -35,12 +39,6 @@ remove_query_string <- function(session = shiny::getDefaultReactiveDomain(), mod
 #'
 #' @noRd
 #'
-#' @examples
-#' cookies <- "cookie_name=cookie-value; cookie_name_2=cookie-value-2; cookie_name_3=cookie-with=sign"
-#'
-#' #polished:::get_cookie(cookies, "cookie_name")
-#' #polished:::get_cookie(cookies, "cookie_name_2")
-#' #polished:::get_cookie(cookies, "cookie_name_3")
 #'
 get_cookie <- function(cookie_string, name) {
 
@@ -110,6 +108,8 @@ send_invite_checkbox <- function(ns, app_url) {
 #'
 #' @export
 #'
+#' @return the Shiny UI
+#'
 normalize_ui <- function(ui, request_) {
   if (is.function(ui)) {
     if (length(formals(ui)) > 0) {
@@ -151,8 +151,8 @@ is_valid_email <- function(x) {
 #'
 #' @param email the email address to check
 #'
-#' @return boolean - whether of not the email is already registered with the polished
-#' account
+#' @return a list with the a boolean element named "is_registered", and an "error"
+#' element if there is an error status code returned from the Polished Auth API request.
 #'
 #' @noRd
 #'
@@ -174,14 +174,21 @@ is_email_registered <- function(email) {
   )
 
   if (!identical(httr::status_code(user_res), 200L)) {
-    print(user_res_content)
-    stop("error checking user registration", .call = FALSE)
-  }
-
-  if (isTRUE(user_res_content$is_password_set)) {
-    out <- TRUE
+    out <- list(
+      is_registered = FALSE,
+      error = user_res_content
+    )
   } else {
-    out <- FALSE
+    if (isTRUE(user_res_content$is_password_set)) {
+      out <- list(
+        is_registered = TRUE
+      )
+
+    } else {
+      out <- list(
+        is_registered = FALSE
+      )
+    }
   }
 
 

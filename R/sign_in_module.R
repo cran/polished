@@ -15,6 +15,8 @@
 #' @importFrom shinyFeedback useShinyFeedback loadingButton
 #' @importFrom shinyjs useShinyjs hidden
 #'
+#' @return the sign in module UI.
+#'
 #' @export
 #'
 #'
@@ -254,6 +256,8 @@ sign_in_module_ui <- function(
 #' @importFrom shinyFeedback showToast hideFeedback showFeedbackDanger resetLoadingButton
 #' @importFrom digest digest
 #'
+#' @return \code{invisible(NULL)}
+#'
 #' @export
 #'
 sign_in_module <- function(input, output, session) {
@@ -352,7 +356,12 @@ sign_in_module_ns <- function(input, output, session) {
 
         # check if user is not registered.  If user is not registered, send them to
         # the registration page and auto populate the registration email input
-        if (is_email_registered(email)) {
+        is_reg_list <- is_email_registered(email)
+        if (!is.null(is_reg_list$error)) {
+          stop(is_reg_list$error, call. = FALSE)
+        }
+
+        if (isTRUE(is_reg_list$is_registered)) {
           # user is invited, so continue the sign in process
           shinyjs::hide("submit_continue_sign_in")
 
@@ -398,11 +407,12 @@ sign_in_module_ns <- function(input, output, session) {
 
     }, error = function(err) {
       # user is not invited
-      print(err)
+      err_msg <- conditionMessage(err)
+      warning(err_msg)
       shinyWidgets::sendSweetAlert(
         session,
         title = "Error",
-        text = err$message,
+        text = err_msg,
         type = "error"
       )
 
@@ -470,9 +480,9 @@ sign_in_module_ns <- function(input, output, session) {
 
       shinyjs::runjs(paste0("$('#", ns('register_password'), "').focus()"))
 
-    }, error = function(e) {
+    }, error = function(err) {
       # user is not invited
-      print(e)
+      warning(conditionMessage(err))
       shinyWidgets::sendSweetAlert(
         session,
         title = "Error",
@@ -517,7 +527,7 @@ sign_in_module_ns <- function(input, output, session) {
 
       shinyFeedback::resetLoadingButton('register_submit')
 
-      print(err)
+      warning(conditionMessage(err))
       shinyFeedback::showToast(
         "error",
         err$message,
@@ -550,5 +560,5 @@ sign_in_module_ns <- function(input, output, session) {
     })
   )
 
-  invisible()
+  invisible(NULL)
 }

@@ -10,6 +10,8 @@
 #' @importFrom htmltools br tags
 #' @importFrom DT DTOutput
 #'
+#' @return the UI to create the user access module.
+#'
 #' @export
 #'
 user_access_module_ui <- function(id) {
@@ -88,6 +90,8 @@ user_access_module_ui <- function(id) {
 #' @importFrom httr GET authenticate stop_for_status content
 #' @importFrom jsonlite fromJSON
 #'
+#' @return \code{invisible(NULL)}
+#'
 #' @export
 #'
 user_access_module <- function(input, output, session) {
@@ -138,9 +142,9 @@ user_access_module <- function(input, output, session) {
 
     }, error = function(err) {
 
-      msg <- "unable to get users from API"
-      print(paste0("[polished] error: ", msg))
-      print(err)
+      msg <- "unable to get users"
+      warning(msg)
+      warning(conditionMessage(err))
 
       showToast(
         "error",
@@ -361,13 +365,18 @@ user_access_module <- function(input, output, session) {
         .options = polished_toast_options
       )
       users_trigger(users_trigger() + 1)
-    }, error = function(e) {
+    }, error = function(err) {
+
+      msg <- "unable to delete delete user"
+      warning(msg)
       shinyFeedback::showToast(
         "error",
-        "Error deleting user",
+        msg,
         .options = polished_toast_options
       )
-      print(e)
+      warning(conditionMessage(err))
+
+      invisible(NULL)
     })
 
   })
@@ -394,4 +403,5 @@ user_access_module <- function(input, output, session) {
     session$reload()
   }, ignoreInit = TRUE)
 
+  invisible(NULL)
 }

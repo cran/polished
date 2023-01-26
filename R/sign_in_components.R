@@ -12,6 +12,8 @@
 #' @importFrom htmltools tagList
 #' @importFrom shinyFeedback useShinyFeedback
 #'
+#' @return the javascript to and other web dependencies to create the sign in functionality.
+#'
 #' @export
 #'
 #'
@@ -53,6 +55,8 @@ sign_in_js <- function(ns = function(x) x) {
 #' @importFrom digest digest
 #' @importFrom shinyFeedback resetLoadingButton showToast
 #' @importFrom shiny getDefaultReactiveDomain
+#'
+#' @return \code{invisible(NULL)}
 #'
 #' @export
 #'
@@ -109,15 +113,19 @@ sign_in_check_jwt <- function(jwt, session = shiny::getDefaultReactiveDomain()) 
 
     }, error = function(err) {
       shinyFeedback::resetLoadingButton('sign_in_submit')
-      print(err)
+
+      err_msg <- conditionMessage(err)
+      warning(err_msg)
 
       shinyFeedback::showToast(
         "error",
-        err$message,
+        err_msg,
         .options = polished_toast_options
       )
 
     })
 
   })
+
+  invisible(NULL)
 }
