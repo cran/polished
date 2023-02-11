@@ -414,21 +414,27 @@ sign_in_module_2_ns <- function(input, output, session) {
           text = "You must have an invite to access this app",
           type = "error"
         )
-        return()
+
+      } else {
+
+
+        # user is invited and not yet registered
+        shinyjs::hide("continue_registration")
+
+        shinyjs::show(
+          "register_passwords",
+          anim = TRUE
+        )
+
+        # NEED to sleep this exact amount to allow animation (above) to show w/o bug
+        Sys.sleep(.25)
+
+        shinyjs::runjs(paste0("$('#", ns('register_password'), "').focus()"))
+
+
       }
 
-      # user is invited
-      shinyjs::hide("continue_registration")
 
-      shinyjs::show(
-        "register_passwords",
-        anim = TRUE
-      )
-
-      # NEED to sleep this exact amount to allow animation (above) to show w/o bug
-      Sys.sleep(.25)
-
-      shinyjs::runjs(paste0("$('#", ns('register_password'), "').focus()"))
 
     }, error = function(err) {
       # user is not invited

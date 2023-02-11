@@ -1,7 +1,7 @@
-1c03a8d132a896ae35167cf41483205e *DESCRIPTION
+53e665eed98291302b65434bda8cf7e7 *DESCRIPTION
 e55a254a4751bacb571e23c051a4eeb6 *LICENSE
 0a81918b3e30628946cf907f841079c2 *NAMESPACE
-6cbfe2176324f1630de26b31356b9431 *NEWS.md
+de0efc127366f58e78ef8e55c440f24c *NEWS.md
 e75611ed19528e3563893f338f3b61d4 *R/admin_app.R
 2b026abd88547d8245edc6afe6863a2f *R/admin_button.R
 b4e3e110017e65f641ba1836cce4f37e *R/api_00.R
@@ -33,11 +33,11 @@ d3d7d0fccdf010819a33e337324e24e9 *R/secure_ui.R
 05cc9378de96381ca257963afc1d5aa6 *R/send_password_reset_email_module.R
 fdd766218b686d7d6be9b44a828481ae *R/set_config_env.R
 3293fe43052bf7f1ce8c707d8ea65e48 *R/sign_in_components.R
-f782a4eb2989ba3697c645855a66c612 *R/sign_in_module.R
-4014211e59bb1c4f407170e88bc8fc46 *R/sign_in_module_2.R
+57d1c689ac79cc5cee9798b2b4151041 *R/sign_in_module.R
+dcd3dcf2f543fe96fd0799c36bda1945 *R/sign_in_module_2.R
 7779b74a69f2b673ae75bfa84b104765 *R/sign_in_ui_default.R
 59b9ef0c46e328f3ee2ac9522c286fbe *R/sign_out_from_shiny.R
-67ac6de90d84435586080b6c6f7ecf9b *R/two_fa_app.R
+0e198315754c96d268eda44a017b7b61 *R/two_fa_app.R
 8f0ecaa36323777eb48f38a874f36fb3 *R/user_access_module.R
 8d2464b89f758a9bcdcd286a68834cd5 *R/user_edit_module.R
 43a82bc1eb38fd807c2a03e1d8493c73 *R/utils.R

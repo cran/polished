@@ -362,7 +362,7 @@ sign_in_module_ns <- function(input, output, session) {
         }
 
         if (isTRUE(is_reg_list$is_registered)) {
-          # user is invited, so continue the sign in process
+          # user is invited and registered, so continue the sign in process
           shinyjs::hide("submit_continue_sign_in")
 
           shinyjs::show(
@@ -448,6 +448,7 @@ sign_in_module_ns <- function(input, output, session) {
     }
 
     invite <- NULL
+
     tryCatch({
       invite_res <- get_app_users(
         app_uid = .polished$app_uid,
@@ -456,7 +457,7 @@ sign_in_module_ns <- function(input, output, session) {
 
       invite <- invite_res$content
 
-      if (is.null(invite)) {
+      if (!identical(nrow(invite), 1L)) {
 
         shinyWidgets::sendSweetAlert(
           session,
@@ -464,21 +465,26 @@ sign_in_module_ns <- function(input, output, session) {
           text = "You must have an invite to access this app",
           type = "error"
         )
-        return()
+
+      } else {
+
+
+        # user is invited
+        shinyjs::hide("continue_registration")
+
+        shinyjs::show(
+          "register_passwords",
+          anim = TRUE
+        )
+
+        # NEED to sleep this exact amount to allow animation (above) to show w/o bug
+        Sys.sleep(.25)
+
+        shinyjs::runjs(paste0("$('#", ns('register_password'), "').focus()"))
+
       }
 
-      # user is invited
-      shinyjs::hide("continue_registration")
 
-      shinyjs::show(
-        "register_passwords",
-        anim = TRUE
-      )
-
-      # NEED to sleep this exact amount to allow animation (above) to show w/o bug
-      Sys.sleep(.25)
-
-      shinyjs::runjs(paste0("$('#", ns('register_password'), "').focus()"))
 
     }, error = function(err) {
       # user is not invited
